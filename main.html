@@ -125,8 +125,8 @@
   </div>
 
   <div class="tabs">
-    <button class="tab active" onclick="switchTab('today')">Today</button>
-    <button class="tab" onclick="switchTab('history')">History</button>
+    <button class="tab active" id="tab-today">Today</button>
+    <button class="tab" id="tab-history">History</button>
   </div>
 
   <!-- TODAY -->
@@ -139,17 +139,17 @@
       </div>
       <div class="paste-row">
         <textarea id="paste-area" placeholder="Client&#9;Task ID&#9;Task Type&#9;Subject&#9;Status&#9;Assignee&#9;WA Due Date&#9;Task Due Date&#9;rEntityName&#9;Rnk&#10;..."></textarea>
-        <button class="btn" onclick="loadPasted()">Load</button>
+        <button class="btn" id="load-btn">Load</button>
       </div>
       <div class="err" id="paste-err">Could not parse data — make sure the first row contains column headers.</div>
       <div class="save-notice" id="save-notice">Snapshot saved for today.</div>
     </div>
 
     <div class="filter-row">
-      <button id="ops-toggle" class="btn btn-toggle" onclick="toggleOps()">Ops view</button>
-      <select id="filter-entity" onchange="renderAll()"><option value="">All teams</option></select>
-      <select id="filter-status" onchange="renderAll()"><option value="">All statuses</option></select>
-      <select id="filter-client" onchange="renderAll()"><option value="">All clients</option></select>
+      <button id="ops-toggle" class="btn btn-toggle">Ops view</button>
+      <select id="filter-entity"><option value="">All teams</option></select>
+      <select id="filter-status"><option value="">All statuses</option></select>
+      <select id="filter-client"><option value="">All clients</option></select>
     </div>
 
     <div class="metrics">
@@ -257,7 +257,7 @@
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;flex-wrap:wrap;gap:8px;">
         <div class="card-title" style="margin:0;">Stored snapshots</div>
-        <button class="btn btn-danger" onclick="clearAllHistory()">Clear all history</button>
+        <button class="btn btn-danger" id="clear-history-btn">Clear all history</button>
       </div>
       <div id="snapshot-list"><div class="empty-state">No snapshots yet. Load data on the Today tab to begin.</div></div>
     </div>
@@ -305,14 +305,35 @@ function parseCSV(text) {
   });
 }
 
+const OPS_TEAMS = new Set([
+  'Business Analysis - Team Wynn',
+  'Configuration - Team Never Laughs',
+  'Configuration - Team Goat',
+  'Quality Assurance - Team Mad Wolf',
+  'Quality Assurance - Team Gunsight',
+  'Operations Management'
+]);
+
+let opsMode = false;
+
+function toggleOps() {
+  opsMode = !opsMode;
+  const btn = document.getElementById('ops-toggle');
+  btn.classList.toggle('on', opsMode);
+  // Clear team filter when switching modes so it doesn't conflict
+  document.getElementById('filter-entity').value = '';
+  renderAll();
+}
+
 function getFiltered() {
   const entity = document.getElementById('filter-entity').value;
   const status = document.getElementById('filter-status').value;
   const client = document.getElementById('filter-client').value;
   return rawData.filter(r =>
-    (!entity || r['rEntityName'] === entity) &&
-    (!status || r['Status'] === status) &&
-    (!client || r['Client'] === client)
+    (!opsMode  || OPS_TEAMS.has(r['rEntityName'])) &&
+    (!entity   || r['rEntityName'] === entity) &&
+    (!status   || r['Status'] === status) &&
+    (!client   || r['Client'] === client)
   );
 }
 
@@ -408,7 +429,7 @@ function updateBadge() {
 function switchTab(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.querySelector(`.tab[onclick="switchTab('${name}')"]`).classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
   document.getElementById('panel-' + name).classList.add('active');
   if (name === 'history') renderHistory();
 }
@@ -650,7 +671,7 @@ function renderHistory() {
         <span class="snapshot-stat">At risk <span style="color:#BA7517">${s.atrisk}</span></span>
         ${topTeam ? `<span class="snapshot-stat">Top team <span>${topTeam[0]} (${topTeam[1]})</span></span>` : ''}
       </div>
-      <span class="snapshot-del" onclick="deleteSnapshot('${d}')" title="Delete snapshot">✕</span>
+      <span class="snapshot-del" data-date="${d}" title="Delete snapshot">✕</span>
     </div>`;
   }).join('');
 }
@@ -707,12 +728,23 @@ function loadPasted() {
 }
 
 document.getElementById('today-date-label').textContent = todayStr;
+document.getElementById('tab-today').addEventListener('click', () => switchTab('today'));
+document.getElementById('tab-history').addEventListener('click', () => switchTab('history'));
+document.getElementById('load-btn').addEventListener('click', loadPasted);
+document.getElementById('ops-toggle').addEventListener('click', toggleOps);
+document.getElementById('clear-history-btn').addEventListener('click', clearAllHistory);
+document.getElementById('filter-entity').addEventListener('change', renderAll);
+document.getElementById('filter-status').addEventListener('change', renderAll);
+document.getElementById('filter-client').addEventListener('change', renderAll);
 document.getElementById('paste-area').addEventListener('keydown', e => {
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) loadPasted();
 });
 updateBadge();
 
-// Auto-restore last session's raw data
+document.getElementById('snapshot-list').addEventListener('click', e => {
+  const el = e.target.closest('.snapshot-del');
+  if (el && el.dataset.date) deleteSnapshot(el.dataset.date);
+});
 (function() {
   const stored = restoreRawData();
   if (!stored || !stored.rows || !stored.rows.length) return;
