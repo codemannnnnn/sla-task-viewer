@@ -179,7 +179,7 @@
 
     <div class="charts-row row-2">
       <div class="card">
-        <div class="card-title">Tasks by team (rEntityName)</div>
+        <div class="card-title">Tasks by team</div>
         <div style="position:relative;width:100%;" id="bar-wrap"><canvas id="chart-entity" height="220"></canvas></div>
       </div>
       <div class="card">
@@ -377,9 +377,10 @@ function buildSnapshot(data) {
     if (slaStatus(r) === 'overdue') overdue_by_team[t] = (overdue_by_team[t] || 0) + 1;
   });
   return {
-    total:   data.length,
-    overdue: data.filter(r => slaStatus(r) === 'overdue').length,
-    atrisk:  data.filter(r => slaStatus(r) === 'atrisk').length,
+    total:     data.length,
+    ops_total: data.filter(r => OPS_TEAMS.has(r['rEntityName'])).length,
+    overdue:   data.filter(r => slaStatus(r) === 'overdue').length,
+    atrisk:    data.filter(r => slaStatus(r) === 'atrisk').length,
     by_team, by_status, overdue_by_team
   };
 }
@@ -667,6 +668,7 @@ function renderHistory() {
       <span class="snapshot-date">${fmtDate(d)}${isTodaySnap ? ' <span style="font-size:10px;color:#3B6D11;font-weight:400;">today</span>' : ''}</span>
       <div class="snapshot-stats">
         <span class="snapshot-stat">Total <span>${s.total}</span></span>
+        <span class="snapshot-stat">Ops <span>${s.ops_total ?? '—'}</span></span>
         <span class="snapshot-stat">Overdue <span style="color:#E24B4A">${s.overdue}</span></span>
         <span class="snapshot-stat">At risk <span style="color:#BA7517">${s.atrisk}</span></span>
         ${topTeam ? `<span class="snapshot-stat">Top team <span>${topTeam[0]} (${topTeam[1]})</span></span>` : ''}
