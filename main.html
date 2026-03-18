@@ -47,6 +47,9 @@
   .btn:active { transform: scale(.98); }
   .btn-danger { border-color: #A32D2D; color: #A32D2D; }
   .btn-danger:hover { background: #FCEBEB; }
+  .btn-toggle { border-color: var(--border2); color: var(--text2); }
+  .btn-toggle.on { background: #378ADD; border-color: #378ADD; color: #fff; }
+  .btn-toggle.on:hover { background: #185FA5; }
   .err { font-size: 11px; color: #A32D2D; margin-top: 6px; display: none; }
   .save-notice { font-size: 11px; color: #3B6D11; margin-top: 6px; display: none; }
 
@@ -143,6 +146,7 @@
     </div>
 
     <div class="filter-row">
+      <button id="ops-toggle" class="btn btn-toggle" onclick="toggleOps()">Ops view</button>
       <select id="filter-entity" onchange="renderAll()"><option value="">All teams</option></select>
       <select id="filter-status" onchange="renderAll()"><option value="">All statuses</option></select>
       <select id="filter-client" onchange="renderAll()"><option value="">All clients</option></select>
