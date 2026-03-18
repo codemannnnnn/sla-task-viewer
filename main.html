@@ -7,137 +7,78 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
   :root {
-    --bg:       #ffffff;
-    --bg2:      #f5f5f3;
-    --bg3:      #eeecea;
-    --text:     #1a1a18;
-    --text2:    #6b6a65;
-    --text3:    #9c9a92;
-    --border:   rgba(0,0,0,0.12);
-    --border2:  rgba(0,0,0,0.22);
-    --radius-md: 8px;
-    --radius-lg: 12px;
+    --bg: #ffffff; --bg2: #f5f5f3; --bg3: #eeecea;
+    --text: #1a1a18; --text2: #6b6a65; --text3: #9c9a92;
+    --border: rgba(0,0,0,0.12); --border2: rgba(0,0,0,0.22);
+    --radius-md: 8px; --radius-lg: 12px;
     --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     --mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
   }
-
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg:      #1c1c1a;
-      --bg2:     #242422;
-      --bg3:     #2c2c2a;
-      --text:    #e8e6de;
-      --text2:   #9c9a92;
-      --text3:   #6b6a65;
-      --border:  rgba(255,255,255,0.10);
-      --border2: rgba(255,255,255,0.20);
+      --bg: #1c1c1a; --bg2: #242422; --bg3: #2c2c2a;
+      --text: #e8e6de; --text2: #9c9a92; --text3: #6b6a65;
+      --border: rgba(255,255,255,0.10); --border2: rgba(255,255,255,0.20);
     }
   }
+  body { font-family: var(--font); background: var(--bg2); color: var(--text); font-size: 14px; line-height: 1.5; min-height: 100vh; }
+  .page { max-width: 1240px; margin: 0 auto; padding: 1.5rem; }
 
-  body {
-    font-family: var(--font);
-    background: var(--bg2);
-    color: var(--text);
-    font-size: 14px;
-    line-height: 1.5;
-    min-height: 100vh;
-  }
-
-  .page { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
-
-  /* Header */
-  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 8px; }
-  .header-title { font-size: 18px; font-weight: 500; color: var(--text); }
+  .header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 8px; }
+  .header-title { font-size: 18px; font-weight: 500; }
   .header-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
 
-  /* Paste box */
-  .paste-box {
-    background: var(--bg);
-    border: 0.5px solid var(--border2);
-    border-radius: var(--radius-lg);
-    padding: 1rem 1.25rem;
-    margin-bottom: 1.25rem;
-  }
-  .paste-label { font-size: 12px; color: var(--text2); margin-bottom: 6px; display: block; }
-  .paste-row { display: flex; gap: 8px; align-items: flex-start; }
-  .paste-row textarea {
-    flex: 1;
-    font-size: 12px;
-    font-family: var(--mono);
-    border: 0.5px solid var(--border2);
-    border-radius: var(--radius-md);
-    padding: 8px;
-    background: var(--bg2);
-    color: var(--text);
-    resize: vertical;
-    min-height: 64px;
-    max-height: 160px;
-    outline: none;
-    transition: border-color .15s;
-  }
-  .paste-row textarea:focus { border-color: #378ADD; }
-  .load-btn {
-    font-size: 12px;
-    padding: 7px 18px;
-    border: 0.5px solid var(--border2);
-    border-radius: var(--radius-md);
-    background: var(--bg);
-    color: var(--text);
-    cursor: pointer;
-    white-space: nowrap;
-    flex-shrink: 0;
-    transition: background .15s;
-  }
-  .load-btn:hover { background: var(--bg2); }
-  .load-btn:active { transform: scale(.98); }
-  .err { font-size: 11px; color: #A32D2D; margin-top: 6px; display: none; }
+  .tabs { display: flex; gap: 2px; border-bottom: 0.5px solid var(--border2); margin-bottom: 1.25rem; }
+  .tab { font-size: 13px; padding: 8px 18px; cursor: pointer; border: none; background: none; color: var(--text2); border-bottom: 2px solid transparent; margin-bottom: -0.5px; transition: color .15s; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--text); border-bottom-color: #378ADD; font-weight: 500; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
 
-  /* Filters */
-  .filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1.25rem; }
-  select {
-    font-size: 12px;
-    padding: 5px 10px;
-    border: 0.5px solid var(--border2);
-    border-radius: var(--radius-md);
-    background: var(--bg);
-    color: var(--text);
-    cursor: pointer;
-    outline: none;
-  }
+  .paste-box { background: var(--bg); border: 0.5px solid var(--border2); border-radius: var(--radius-lg); padding: 1rem 1.25rem; margin-bottom: 1.25rem; }
+  .paste-label { font-size: 12px; color: var(--text2); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+  .paste-row { display: flex; gap: 8px; align-items: flex-start; }
+  .paste-row textarea { flex: 1; font-size: 12px; font-family: var(--mono); border: 0.5px solid var(--border2); border-radius: var(--radius-md); padding: 8px; background: var(--bg2); color: var(--text); resize: vertical; min-height: 64px; max-height: 160px; outline: none; transition: border-color .15s; }
+  .paste-row textarea:focus { border-color: #378ADD; }
+
+  .btn { font-size: 12px; padding: 7px 16px; border: 0.5px solid var(--border2); border-radius: var(--radius-md); background: var(--bg); color: var(--text); cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: background .15s; }
+  .btn:hover { background: var(--bg2); }
+  .btn:active { transform: scale(.98); }
+  .btn-danger { border-color: #A32D2D; color: #A32D2D; }
+  .btn-danger:hover { background: #FCEBEB; }
+  .err { font-size: 11px; color: #A32D2D; margin-top: 6px; display: none; }
+  .save-notice { font-size: 11px; color: #3B6D11; margin-top: 6px; display: none; }
+
+  .filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1.25rem; align-items: center; }
+  select { font-size: 12px; padding: 5px 10px; border: 0.5px solid var(--border2); border-radius: var(--radius-md); background: var(--bg); color: var(--text); cursor: pointer; outline: none; }
   select:focus { border-color: #378ADD; }
 
-  /* Metrics */
   .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 1.25rem; }
   .metric { background: var(--bg3); border-radius: var(--radius-md); padding: 1rem; }
   .metric .mlabel { font-size: 12px; color: var(--text2); margin-bottom: 6px; }
   .metric .mval { font-size: 26px; font-weight: 500; }
   .metric .msub { font-size: 11px; margin-top: 3px; }
+  .metric .mdelta { font-size: 11px; margin-top: 3px; font-weight: 500; }
+  .delta-up { color: #A32D2D; }
+  .delta-down { color: #3B6D11; }
+  .delta-flat { color: var(--text3); }
 
-  /* Cards */
-  .card {
-    background: var(--bg);
-    border: 0.5px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 1rem 1.25rem;
-  }
+  .card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; }
   .card-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: .75rem; }
+  .card-sub { font-size: 11px; color: var(--text2); margin-top: -0.5rem; margin-bottom: .75rem; }
 
-  /* Chart rows */
   .charts-row { display: grid; gap: 12px; margin-bottom: 12px; }
   .row-2 { grid-template-columns: 1fr 1fr; }
   .row-3 { grid-template-columns: 1.4fr 1fr 1fr; }
 
-  /* Legend */
   .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 8px; }
   .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text2); }
   .legend-swatch { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
 
-  /* Table */
   .table-wrap { overflow-x: auto; }
   table { width: 100%; font-size: 12px; border-collapse: collapse; }
-  th { font-weight: 500; text-align: left; padding: 7px 10px; border-bottom: 0.5px solid var(--border2); color: var(--text2); font-size: 11px; }
+  th { font-weight: 500; text-align: left; padding: 7px 10px; border-bottom: 0.5px solid var(--border2); color: var(--text2); font-size: 11px; white-space: nowrap; }
   td { padding: 7px 10px; border-bottom: 0.5px solid var(--border); color: var(--text); }
   tr:last-child td { border-bottom: none; }
   tr:hover td { background: var(--bg2); }
@@ -147,8 +88,21 @@
   .atrisk  { background: #FAEEDA; color: #854F0B; }
   .ok      { background: #EAF3DE; color: #3B6D11; }
   .neutral { background: var(--bg3); color: var(--text2); }
-
   .empty-state { padding: 2.5rem; text-align: center; font-size: 13px; color: var(--text2); }
+
+  .snapshot-list { display: grid; gap: 8px; }
+  .snapshot-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--bg3); border-radius: var(--radius-md); font-size: 12px; flex-wrap: wrap; }
+  .snapshot-date { font-weight: 500; min-width: 80px; }
+  .snapshot-stats { display: flex; gap: 16px; flex: 1; flex-wrap: wrap; }
+  .snapshot-stat { color: var(--text2); }
+  .snapshot-stat span { color: var(--text); font-weight: 500; }
+  .snapshot-del { margin-left: auto; font-size: 11px; color: var(--text3); cursor: pointer; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; }
+  .snapshot-del:hover { color: #A32D2D; background: #FCEBEB; }
+
+  .storage-bar-wrap { margin-bottom: 1.25rem; }
+  .storage-bar-label { font-size: 11px; color: var(--text2); margin-bottom: 4px; display: flex; justify-content: space-between; }
+  .storage-bar-track { height: 4px; background: var(--bg3); border-radius: 2px; overflow: hidden; }
+  .storage-bar-fill { height: 100%; background: #378ADD; border-radius: 2px; transition: width .4s; }
 
   @media (max-width: 700px) {
     .metrics { grid-template-columns: repeat(2, 1fr); }
@@ -159,128 +113,164 @@
 <body>
 <div class="page">
 
-  <!-- Header -->
   <div class="header">
     <div>
       <div class="header-title">SLA Task Monitor</div>
       <div class="header-sub" id="data-sub">No data loaded — paste your CSV below</div>
     </div>
+    <div style="font-size:11px;color:var(--text2);padding-top:4px;" id="snapshot-badge"></div>
   </div>
 
-  <!-- Paste box -->
-  <div class="paste-box">
-    <span class="paste-label">Paste tab- or comma-separated data (include header row) — Ctrl+Enter to load</span>
-    <div class="paste-row">
-      <textarea id="paste-area" placeholder="Client&#9;Task ID&#9;Task Type&#9;Subject&#9;Status&#9;Assignee&#9;WA Due Date&#9;Task Due Date&#9;rEntityName&#9;Rnk&#10;..."></textarea>
-      <button class="load-btn" onclick="loadPasted()">Load</button>
-    </div>
-    <div class="err" id="paste-err">Could not parse data — make sure the first row contains column headers.</div>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('today')">Today</button>
+    <button class="tab" onclick="switchTab('history')">History</button>
   </div>
 
-  <!-- Filters -->
-  <div class="filter-row">
-    <select id="filter-entity" onchange="renderAll()"><option value="">All teams</option></select>
-    <select id="filter-status" onchange="renderAll()"><option value="">All statuses</option></select>
-    <select id="filter-client" onchange="renderAll()"><option value="">All clients</option></select>
-  </div>
+  <!-- TODAY -->
+  <div class="tab-panel active" id="panel-today">
 
-  <!-- Metrics -->
-  <div class="metrics">
-    <div class="metric">
-      <div class="mlabel">Total tasks</div>
-      <div class="mval" id="m-total">—</div>
+    <div class="paste-box">
+      <div class="paste-label">
+        <span>Paste tab- or comma-separated data (include header row) — Ctrl+Enter to load</span>
+        <span id="today-date-label" style="color:var(--text3);"></span>
+      </div>
+      <div class="paste-row">
+        <textarea id="paste-area" placeholder="Client&#9;Task ID&#9;Task Type&#9;Subject&#9;Status&#9;Assignee&#9;WA Due Date&#9;Task Due Date&#9;rEntityName&#9;Rnk&#10;..."></textarea>
+        <button class="btn" onclick="loadPasted()">Load</button>
+      </div>
+      <div class="err" id="paste-err">Could not parse data — make sure the first row contains column headers.</div>
+      <div class="save-notice" id="save-notice">Snapshot saved for today.</div>
     </div>
-    <div class="metric">
-      <div class="mlabel">Overdue</div>
-      <div class="mval" id="m-overdue" style="color:#E24B4A;">—</div>
-      <div class="msub" id="m-overdue-pct" style="color:#A32D2D;"></div>
-    </div>
-    <div class="metric">
-      <div class="mlabel">At risk (≤3 days)</div>
-      <div class="mval" id="m-atrisk" style="color:#BA7517;">—</div>
-      <div class="msub" id="m-atrisk-pct" style="color:#854F0B;"></div>
-    </div>
-    <div class="metric">
-      <div class="mlabel">Teams active</div>
-      <div class="mval" id="m-teams">—</div>
-    </div>
-  </div>
 
-  <!-- Row 1: entity bar + status donut -->
-  <div class="charts-row row-2">
-    <div class="card">
-      <div class="card-title">Tasks by team (rEntityName)</div>
-      <div style="position:relative;width:100%;" id="bar-wrap">
-        <canvas id="chart-entity" height="220"></canvas>
+    <div class="filter-row">
+      <select id="filter-entity" onchange="renderAll()"><option value="">All teams</option></select>
+      <select id="filter-status" onchange="renderAll()"><option value="">All statuses</option></select>
+      <select id="filter-client" onchange="renderAll()"><option value="">All clients</option></select>
+    </div>
+
+    <div class="metrics">
+      <div class="metric">
+        <div class="mlabel">Total tasks</div>
+        <div class="mval" id="m-total">—</div>
+        <div class="mdelta" id="d-total"></div>
+      </div>
+      <div class="metric">
+        <div class="mlabel">Overdue</div>
+        <div class="mval" id="m-overdue" style="color:#E24B4A;">—</div>
+        <div class="msub" id="m-overdue-pct" style="color:#A32D2D;"></div>
+        <div class="mdelta" id="d-overdue"></div>
+      </div>
+      <div class="metric">
+        <div class="mlabel">At risk (≤3 days)</div>
+        <div class="mval" id="m-atrisk" style="color:#BA7517;">—</div>
+        <div class="msub" id="m-atrisk-pct" style="color:#854F0B;"></div>
+        <div class="mdelta" id="d-atrisk"></div>
+      </div>
+      <div class="metric">
+        <div class="mlabel">Teams active</div>
+        <div class="mval" id="m-teams">—</div>
+        <div class="mdelta" id="d-teams"></div>
       </div>
     </div>
-    <div class="card">
-      <div class="card-title">Status distribution</div>
-      <div id="legend-status" class="legend"></div>
-      <div style="position:relative;height:180px;">
-        <canvas id="chart-status"></canvas>
-      </div>
-    </div>
-  </div>
 
-  <!-- Row 2: overdue + task type + assignee -->
-  <div class="charts-row row-3">
-    <div class="card">
-      <div class="card-title">Overdue tasks by team</div>
-      <div style="position:relative;width:100%;" id="overdue-wrap">
-        <canvas id="chart-overdue" height="180"></canvas>
+    <div class="charts-row row-2">
+      <div class="card">
+        <div class="card-title">Tasks by team (rEntityName)</div>
+        <div style="position:relative;width:100%;" id="bar-wrap"><canvas id="chart-entity" height="220"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Status distribution</div>
+        <div id="legend-status" class="legend"></div>
+        <div style="position:relative;height:180px;"><canvas id="chart-status"></canvas></div>
       </div>
     </div>
-    <div class="card">
-      <div class="card-title">Task types</div>
-      <div id="legend-type" class="legend"></div>
-      <div style="position:relative;height:150px;">
-        <canvas id="chart-type"></canvas>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-title">Assignee load</div>
-      <div style="position:relative;height:150px;">
-        <canvas id="chart-assignee"></canvas>
-      </div>
-    </div>
-  </div>
 
-  <!-- Table -->
-  <div class="card">
-    <div class="card-title">
-      Task detail
-      <span id="table-count" style="font-weight:400;color:var(--text2);font-size:11px;"></span>
+    <div class="charts-row row-3">
+      <div class="card">
+        <div class="card-title">Overdue tasks by team</div>
+        <div style="position:relative;width:100%;" id="overdue-wrap"><canvas id="chart-overdue" height="180"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Task types</div>
+        <div id="legend-type" class="legend"></div>
+        <div style="position:relative;height:150px;"><canvas id="chart-type"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Assignee load</div>
+        <div style="position:relative;height:150px;"><canvas id="chart-assignee"></canvas></div>
+      </div>
     </div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Task ID</th>
-            <th>Client</th>
-            <th>Subject</th>
-            <th>Team</th>
-            <th>Assignee</th>
-            <th>Status</th>
-            <th>WA Due Date</th>
-            <th>Task Due Date</th>
-            <th>SLA Status</th>
-          </tr>
-        </thead>
-        <tbody id="task-tbody">
-          <tr><td colspan="9" class="empty-state">Load data above to see tasks</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
 
-</div><!-- /page -->
+    <div class="card">
+      <div class="card-title">Task detail <span id="table-count" style="font-weight:400;color:var(--text2);font-size:11px;"></span></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Task ID</th><th>Client</th><th>Subject</th><th>Team</th><th>Assignee</th><th>Status</th><th>WA Due Date</th><th>Task Due Date</th><th>SLA Status</th></tr></thead>
+          <tbody id="task-tbody"><tr><td colspan="9" class="empty-state">Load data above to see tasks</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /today -->
+
+  <!-- HISTORY -->
+  <div class="tab-panel" id="panel-history">
+
+    <div class="storage-bar-wrap">
+      <div class="storage-bar-label">
+        <span>localStorage usage</span>
+        <span id="storage-used-label">—</span>
+      </div>
+      <div class="storage-bar-track"><div class="storage-bar-fill" id="storage-bar-fill" style="width:0%"></div></div>
+    </div>
+
+    <div class="charts-row row-2">
+      <div class="card">
+        <div class="card-title">Total tasks over time</div>
+        <div class="card-sub">Daily snapshot — total open task count</div>
+        <div style="position:relative;height:200px;"><canvas id="hist-total"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Overdue &amp; at-risk over time</div>
+        <div class="card-sub">How urgency is trending day to day</div>
+        <div style="position:relative;height:200px;"><canvas id="hist-sla"></canvas></div>
+      </div>
+    </div>
+
+    <div class="charts-row row-2">
+      <div class="card">
+        <div class="card-title">Team task distribution over time</div>
+        <div class="card-sub">Stacked daily count by team</div>
+        <div style="position:relative;height:240px;"><canvas id="hist-teams"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Overdue by team over time</div>
+        <div class="card-sub">Which teams carry the most overdue load</div>
+        <div style="position:relative;height:240px;"><canvas id="hist-overdue-teams"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;flex-wrap:wrap;gap:8px;">
+        <div class="card-title" style="margin:0;">Stored snapshots</div>
+        <button class="btn btn-danger" onclick="clearAllHistory()">Clear all history</button>
+      </div>
+      <div id="snapshot-list"><div class="empty-state">No snapshots yet. Load data on the Today tab to begin.</div></div>
+    </div>
+
+  </div><!-- /history -->
+
+</div>
 
 <script>
-const PALETTE = ['#378ADD','#1D9E75','#D85A30','#D4537E','#BA7517','#7F77DD','#639922','#888780','#185FA5','#0F6E56'];
+const PALETTE = ['#378ADD','#1D9E75','#D85A30','#D4537E','#BA7517','#7F77DD','#639922','#888780','#185FA5','#0F6E56','#A32D2D','#5F5E5A'];
+const STORAGE_KEY = 'sla_history_v1';
 let rawData = [];
 let chartRefs = {};
 const today = new Date(); today.setHours(0,0,0,0);
+const todayStr = today.toISOString().slice(0,10);
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
 
 function parseDue(s) {
   if (!s) return null;
@@ -302,11 +292,11 @@ function parseCSV(text) {
   const lines = text.trim().split(/\r?\n/);
   if (!lines.length) return [];
   const delim = lines[0].includes('\t') ? '\t' : ',';
-  const headers = lines[0].split(delim).map(h => h.trim().replace(/^"|"$/g, ''));
+  const headers = lines[0].split(delim).map(h => h.trim().replace(/^"|"$/g,''));
   return lines.slice(1).filter(l => l.trim()).map(line => {
-    const vals = line.split(delim).map(v => v.trim().replace(/^"|"$/g, ''));
+    const vals = line.split(delim).map(v => v.trim().replace(/^"|"$/g,''));
     const obj = {};
-    headers.forEach((h, i) => obj[h] = vals[i] || '');
+    headers.forEach((h,i) => obj[h] = vals[i] || '');
     return obj;
   });
 }
@@ -322,6 +312,105 @@ function getFiltered() {
   );
 }
 
+function destroyChart(key) {
+  if (chartRefs[key]) { chartRefs[key].destroy(); delete chartRefs[key]; }
+}
+
+function fmtDate(d) {
+  const [y,m,day] = d.split('-');
+  return `${m}/${day}/${y.slice(2)}`;
+}
+
+function renderDelta(cur, prev, higherIsBad) {
+  if (prev == null) return '';
+  const diff = cur - prev;
+  if (diff === 0) return `<span class="delta-flat">same as prior</span>`;
+  const sign = diff > 0 ? '+' : '';
+  const cls = (higherIsBad ? diff > 0 : diff < 0) ? 'delta-up' : 'delta-down';
+  return `<span class="${cls}">${sign}${diff} vs prior snapshot</span>`;
+}
+
+// ── History storage ───────────────────────────────────────────────────────────
+
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); }
+  catch(e) { return {}; }
+}
+
+function saveHistory(h) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(h)); return true; }
+  catch(e) { alert('localStorage full — consider clearing old snapshots in the History tab.'); return false; }
+}
+
+function buildSnapshot(data) {
+  const by_team = {}, by_status = {}, overdue_by_team = {};
+  data.forEach(r => {
+    const t = r['rEntityName'] || 'Unknown';
+    const s = r['Status'] || 'Unknown';
+    by_team[t]   = (by_team[t]   || 0) + 1;
+    by_status[s] = (by_status[s] || 0) + 1;
+    if (slaStatus(r) === 'overdue') overdue_by_team[t] = (overdue_by_team[t] || 0) + 1;
+  });
+  return {
+    total:   data.length,
+    overdue: data.filter(r => slaStatus(r) === 'overdue').length,
+    atrisk:  data.filter(r => slaStatus(r) === 'atrisk').length,
+    by_team, by_status, overdue_by_team
+  };
+}
+
+function saveSnapshot(data) {
+  const h = loadHistory();
+  h[todayStr] = buildSnapshot(data);
+  if (saveHistory(h)) {
+    document.getElementById('save-notice').style.display = 'block';
+    setTimeout(() => document.getElementById('save-notice').style.display = 'none', 3000);
+    updateBadge();
+  }
+}
+
+function deleteSnapshot(dateKey) {
+  if (!confirm(`Delete snapshot for ${fmtDate(dateKey)}?`)) return;
+  const h = loadHistory();
+  delete h[dateKey];
+  saveHistory(h);
+  renderHistory();
+  updateBadge();
+}
+
+function clearAllHistory() {
+  if (!confirm('Delete ALL stored snapshots? This cannot be undone.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  renderHistory();
+  updateBadge();
+}
+
+function storageUsedBytes() {
+  let b = 0;
+  for (let k in localStorage) {
+    if (localStorage.hasOwnProperty(k)) b += (localStorage[k].length + k.length) * 2;
+  }
+  return b;
+}
+
+function updateBadge() {
+  const h = loadHistory();
+  const n = Object.keys(h).length;
+  document.getElementById('snapshot-badge').textContent = n ? `${n} snapshot${n===1?'':'s'} stored` : '';
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`.tab[onclick="switchTab('${name}')"]`).classList.add('active');
+  document.getElementById('panel-' + name).classList.add('active');
+  if (name === 'history') renderHistory();
+}
+
+// ── Today charts ──────────────────────────────────────────────────────────────
+
 function buildSelects() {
   const entities = [...new Set(rawData.map(r => r['rEntityName']).filter(Boolean))].sort();
   const statuses = [...new Set(rawData.map(r => r['Status']).filter(Boolean))].sort();
@@ -330,15 +419,11 @@ function buildSelects() {
     const sel = document.getElementById(id);
     const cur = sel.value;
     sel.innerHTML = `<option value="">All ${label}</option>` +
-      vals.map(v => `<option${v === cur ? ' selected' : ''}>${v}</option>`).join('');
+      vals.map(v => `<option${v===cur?' selected':''}>${v}</option>`).join('');
   }
   fill('filter-entity', entities, 'teams');
   fill('filter-status', statuses, 'statuses');
   fill('filter-client', clients, 'clients');
-}
-
-function destroyChart(key) {
-  if (chartRefs[key]) { chartRefs[key].destroy(); delete chartRefs[key]; }
 }
 
 function renderAll() {
@@ -347,14 +432,23 @@ function renderAll() {
 
   const overdueCnt = data.filter(r => slaStatus(r) === 'overdue').length;
   const atRiskCnt  = data.filter(r => slaStatus(r) === 'atrisk').length;
-  const teams      = new Set(data.map(r => r['rEntityName']).filter(Boolean));
+  const teamsCnt   = new Set(data.map(r => r['rEntityName']).filter(Boolean)).size;
+
+  const h = loadHistory();
+  const dates = Object.keys(h).sort();
+  const prevDate = dates.filter(d => d < todayStr).pop();
+  const prev = prevDate ? h[prevDate] : null;
 
   document.getElementById('m-total').textContent   = data.length.toLocaleString();
   document.getElementById('m-overdue').textContent = overdueCnt;
   document.getElementById('m-atrisk').textContent  = atRiskCnt;
-  document.getElementById('m-teams').textContent   = teams.size;
-  document.getElementById('m-overdue-pct').textContent = data.length ? Math.round(overdueCnt / data.length * 100) + '% of total' : '';
-  document.getElementById('m-atrisk-pct').textContent  = data.length ? Math.round(atRiskCnt  / data.length * 100) + '% of total' : '';
+  document.getElementById('m-teams').textContent   = teamsCnt;
+  document.getElementById('m-overdue-pct').textContent = data.length ? Math.round(overdueCnt/data.length*100)+'% of total' : '';
+  document.getElementById('m-atrisk-pct').textContent  = data.length ? Math.round(atRiskCnt/data.length*100)+'% of total'  : '';
+  document.getElementById('d-total').innerHTML   = renderDelta(data.length, prev?.total,  true);
+  document.getElementById('d-overdue').innerHTML = renderDelta(overdueCnt,  prev?.overdue, true);
+  document.getElementById('d-atrisk').innerHTML  = renderDelta(atRiskCnt,   prev?.atrisk,  true);
+  document.getElementById('d-teams').innerHTML   = renderDelta(teamsCnt, prev ? Object.keys(prev.by_team||{}).length : null, false);
 
   renderEntityBar(data);
   renderStatusDonut(data);
@@ -366,137 +460,198 @@ function renderAll() {
 
 function renderEntityBar(data) {
   const counts = {};
-  data.forEach(r => { const e = r['rEntityName'] || 'Unknown'; counts[e] = (counts[e] || 0) + 1; });
-  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-  const labels = sorted.map(x => x[0]);
-  const vals   = sorted.map(x => x[1]);
-  document.getElementById('bar-wrap').style.height = Math.max(180, labels.length * 32 + 60) + 'px';
+  data.forEach(r => { const e=r['rEntityName']||'Unknown'; counts[e]=(counts[e]||0)+1; });
+  const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const labels = sorted.map(x=>x[0]), vals = sorted.map(x=>x[1]);
+  document.getElementById('bar-wrap').style.height = Math.max(180, labels.length*32+60)+'px';
   destroyChart('entity');
   chartRefs.entity = new Chart(document.getElementById('chart-entity').getContext('2d'), {
-    type: 'bar',
-    data: { labels, datasets: [{ data: vals, backgroundColor: PALETTE.slice(0, labels.length), borderRadius: 4, borderSkipped: false }] },
-    options: {
-      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${c.raw} tasks` } } },
-      scales: {
-        x: { grid: { color: 'rgba(128,128,128,.1)' }, ticks: { font: { size: 11 } } },
-        y: { grid: { display: false }, ticks: { font: { size: 11 } } }
-      }
-    }
+    type:'bar', data:{labels,datasets:[{data:vals,backgroundColor:PALETTE.slice(0,labels.length),borderRadius:4,borderSkipped:false}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.raw} tasks`}}},scales:{x:{grid:{color:'rgba(128,128,128,.1)'},ticks:{font:{size:11}}},y:{grid:{display:false},ticks:{font:{size:11}}}}}
   });
 }
 
 function renderStatusDonut(data) {
   const counts = {};
-  data.forEach(r => { const s = r['Status'] || 'Unknown'; counts[s] = (counts[s] || 0) + 1; });
-  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 8);
-  const labels = sorted.map(x => x[0]);
-  const vals   = sorted.map(x => x[1]);
-  const total  = vals.reduce((a, b) => a + b, 0);
-  document.getElementById('legend-status').innerHTML = labels.map((l, i) =>
-    `<span class="legend-item"><span class="legend-swatch" style="background:${PALETTE[i % PALETTE.length]}"></span>${l} ${Math.round(vals[i] / total * 100)}%</span>`
+  data.forEach(r => { const s=r['Status']||'Unknown'; counts[s]=(counts[s]||0)+1; });
+  const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const labels = sorted.map(x=>x[0]), vals = sorted.map(x=>x[1]);
+  const total  = vals.reduce((a,b)=>a+b,0);
+  document.getElementById('legend-status').innerHTML = labels.map((l,i)=>
+    `<span class="legend-item"><span class="legend-swatch" style="background:${PALETTE[i%PALETTE.length]}"></span>${l} ${Math.round(vals[i]/total*100)}%</span>`
   ).join('');
   destroyChart('status');
   chartRefs.status = new Chart(document.getElementById('chart-status').getContext('2d'), {
-    type: 'doughnut',
-    data: { labels, datasets: [{ data: vals, backgroundColor: PALETTE.slice(0, labels.length), borderWidth: 0, hoverOffset: 4 }] },
-    options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${c.label}: ${c.raw}` } } } }
+    type:'doughnut', data:{labels,datasets:[{data:vals,backgroundColor:PALETTE.slice(0,labels.length),borderWidth:0,hoverOffset:4}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.label}: ${c.raw}`}}}}
   });
 }
 
 function renderOverdueBar(data) {
   const od = {};
-  data.filter(r => slaStatus(r) === 'overdue').forEach(r => { const e = r['rEntityName'] || 'Unknown'; od[e] = (od[e] || 0) + 1; });
-  const sorted = Object.entries(od).sort((a, b) => b[1] - a[1]);
-  const labels = sorted.map(x => x[0]);
-  const vals   = sorted.map(x => x[1]);
-  document.getElementById('overdue-wrap').style.height = Math.max(120, labels.length * 28 + 60) + 'px';
+  data.filter(r=>slaStatus(r)==='overdue').forEach(r=>{ const e=r['rEntityName']||'Unknown'; od[e]=(od[e]||0)+1; });
+  const sorted = Object.entries(od).sort((a,b)=>b[1]-a[1]);
+  const labels = sorted.map(x=>x[0]), vals = sorted.map(x=>x[1]);
+  document.getElementById('overdue-wrap').style.height = Math.max(120, labels.length*28+60)+'px';
   destroyChart('overdue');
   chartRefs.overdue = new Chart(document.getElementById('chart-overdue').getContext('2d'), {
-    type: 'bar',
-    data: { labels, datasets: [{ data: vals, backgroundColor: '#E24B4A', borderRadius: 4, borderSkipped: false }] },
-    options: {
-      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { color: 'rgba(128,128,128,.1)' }, ticks: { font: { size: 10 }, stepSize: 1 } },
-        y: { grid: { display: false }, ticks: { font: { size: 10 } } }
-      }
-    }
+    type:'bar', data:{labels,datasets:[{data:vals,backgroundColor:'#E24B4A',borderRadius:4,borderSkipped:false}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(128,128,128,.1)'},ticks:{font:{size:10},stepSize:1}},y:{grid:{display:false},ticks:{font:{size:10}}}}}
   });
 }
 
 function renderTypeDonut(data) {
   const counts = {};
-  data.forEach(r => { const t = r['Task Type'] || 'Unknown'; counts[t] = (counts[t] || 0) + 1; });
-  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 6);
-  const labels = sorted.map(x => x[0]);
-  const vals   = sorted.map(x => x[1]);
-  const total  = vals.reduce((a, b) => a + b, 0);
-  document.getElementById('legend-type').innerHTML = labels.map((l, i) =>
-    `<span class="legend-item"><span class="legend-swatch" style="background:${PALETTE[i % PALETTE.length]}"></span>${l} ${Math.round(vals[i] / total * 100)}%</span>`
+  data.forEach(r=>{ const t=r['Task Type']||'Unknown'; counts[t]=(counts[t]||0)+1; });
+  const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const labels = sorted.map(x=>x[0]), vals = sorted.map(x=>x[1]);
+  const total  = vals.reduce((a,b)=>a+b,0);
+  document.getElementById('legend-type').innerHTML = labels.map((l,i)=>
+    `<span class="legend-item"><span class="legend-swatch" style="background:${PALETTE[i%PALETTE.length]}"></span>${l} ${Math.round(vals[i]/total*100)}%</span>`
   ).join('');
   destroyChart('type');
   chartRefs.type = new Chart(document.getElementById('chart-type').getContext('2d'), {
-    type: 'doughnut',
-    data: { labels, datasets: [{ data: vals, backgroundColor: PALETTE.slice(0, labels.length), borderWidth: 0, hoverOffset: 4 }] },
-    options: { responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${c.label}: ${c.raw}` } } } }
+    type:'doughnut', data:{labels,datasets:[{data:vals,backgroundColor:PALETTE.slice(0,labels.length),borderWidth:0,hoverOffset:4}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.label}: ${c.raw}`}}}}
   });
 }
 
 function renderAssigneeBar(data) {
   const counts = {};
-  data.forEach(r => { const a = r['Assignee'] || 'Unassigned'; counts[a] = (counts[a] || 0) + 1; });
-  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 8);
-  const labels = sorted.map(x => x[0]);
-  const vals   = sorted.map(x => x[1]);
+  data.forEach(r=>{ const a=r['Assignee']||'Unassigned'; counts[a]=(counts[a]||0)+1; });
+  const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const labels = sorted.map(x=>x[0]), vals = sorted.map(x=>x[1]);
   destroyChart('assignee');
   chartRefs.assignee = new Chart(document.getElementById('chart-assignee').getContext('2d'), {
-    type: 'bar',
-    data: { labels, datasets: [{ data: vals, backgroundColor: PALETTE[5], borderRadius: 4, borderSkipped: false }] },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 35 } },
-        y: { grid: { color: 'rgba(128,128,128,.1)' }, ticks: { font: { size: 10 }, stepSize: 1 } }
-      }
-    }
+    type:'bar', data:{labels,datasets:[{data:vals,backgroundColor:PALETTE[5],borderRadius:4,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:10},maxRotation:35}},y:{grid:{color:'rgba(128,128,128,.1)'},ticks:{font:{size:10},stepSize:1}}}}
   });
 }
 
 function renderTable(data) {
-  const sorted = [...data].sort((a, b) => {
-    const da = parseDue(a['WA Due Date']) || parseDue(a['Task Due Date']) || new Date(9999, 0);
-    const db = parseDue(b['WA Due Date']) || parseDue(b['Task Due Date']) || new Date(9999, 0);
-    return da - db;
-  }).slice(0, 200);
-  document.getElementById('table-count').textContent = `(${Math.min(data.length, 200)} of ${data.length})`;
+  const sorted = [...data].sort((a,b)=>{
+    const da=parseDue(a['WA Due Date'])||parseDue(a['Task Due Date'])||new Date(9999,0);
+    const db=parseDue(b['WA Due Date'])||parseDue(b['Task Due Date'])||new Date(9999,0);
+    return da-db;
+  }).slice(0,200);
+  document.getElementById('table-count').textContent = `(${Math.min(data.length,200)} of ${data.length})`;
   const tbody = document.getElementById('task-tbody');
-  if (!sorted.length) { tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No matching tasks</td></tr>'; return; }
+  if (!sorted.length) { tbody.innerHTML='<tr><td colspan="9" class="empty-state">No matching tasks</td></tr>'; return; }
   tbody.innerHTML = sorted.map(r => {
     const sl = slaStatus(r);
-    const badge =
-      sl === 'overdue' ? '<span class="badge overdue">Overdue</span>' :
-      sl === 'atrisk'  ? '<span class="badge atrisk">At risk</span>' :
-      sl === 'ok'      ? '<span class="badge ok">On track</span>' :
-                         '<span class="badge neutral">—</span>';
-    const waStr   = (r['WA Due Date']   || '—').split(' ')[0];
-    const taskStr = (r['Task Due Date'] || '—').split(' ')[0];
-    const subj = (r['Subject'] || '').slice(0, 60) + ((r['Subject'] || '').length > 60 ? '…' : '');
+    const badge = sl==='overdue'?'<span class="badge overdue">Overdue</span>':sl==='atrisk'?'<span class="badge atrisk">At risk</span>':sl==='ok'?'<span class="badge ok">On track</span>':'<span class="badge neutral">—</span>';
+    const waStr   = (r['WA Due Date']  ||'—').split(' ')[0];
+    const taskStr = (r['Task Due Date']||'—').split(' ')[0];
+    const subj = (r['Subject']||'').slice(0,60)+((r['Subject']||'').length>60?'…':'');
     return `<tr>
-      <td style="font-family:var(--mono);font-size:11px;">${r['Task ID'] || '—'}</td>
-      <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['Client']||''}">${(r['Client'] || '—').slice(0, 35)}</td>
+      <td style="font-family:var(--mono);font-size:11px;">${r['Task ID']||'—'}</td>
+      <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['Client']||''}">${(r['Client']||'—').slice(0,35)}</td>
       <td style="max-width:220px;" title="${r['Subject']||''}">${subj}</td>
-      <td>${r['rEntityName'] || '—'}</td>
-      <td>${r['Assignee'] || '—'}</td>
-      <td style="max-width:160px;font-size:11px;" title="${r['Status']||''}">${(r['Status'] || '—').slice(0, 45)}</td>
+      <td>${r['rEntityName']||'—'}</td>
+      <td>${r['Assignee']||'—'}</td>
+      <td style="max-width:160px;font-size:11px;" title="${r['Status']||''}">${(r['Status']||'—').slice(0,45)}</td>
       <td style="font-size:11px;white-space:nowrap;">${waStr}</td>
       <td style="font-size:11px;white-space:nowrap;color:var(--text2);">${taskStr}</td>
       <td>${badge}</td>
     </tr>`;
   }).join('');
 }
+
+// ── History charts ────────────────────────────────────────────────────────────
+
+function renderHistory() {
+  const h = loadHistory();
+  const dates = Object.keys(h).sort();
+
+  const used = storageUsedBytes();
+  const cap  = 5 * 1024 * 1024;
+  const pct  = Math.min(100, Math.round(used / cap * 100));
+  document.getElementById('storage-bar-fill').style.width = pct + '%';
+  document.getElementById('storage-used-label').textContent = `${(used/1024).toFixed(1)} KB of ~5 MB (${pct}%)`;
+
+  if (!dates.length) {
+    ['hist-total','hist-sla','hist-teams','hist-overdue-teams'].forEach(k => destroyChart(k));
+    document.getElementById('snapshot-list').innerHTML = '<div class="empty-state">No snapshots yet. Load data on the Today tab to begin.</div>';
+    return;
+  }
+
+  const labels = dates.map(fmtDate);
+
+  // Total line
+  destroyChart('hist-total');
+  chartRefs['hist-total'] = new Chart(document.getElementById('hist-total').getContext('2d'), {
+    type:'line',
+    data:{ labels, datasets:[{ label:'Total', data:dates.map(d=>h[d].total), borderColor:'#378ADD', backgroundColor:'rgba(55,138,221,.08)', borderWidth:2, pointRadius:4, pointBackgroundColor:'#378ADD', fill:true, tension:0.3 }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{grid:{color:'rgba(128,128,128,.08)'},ticks:{font:{size:11}}}, y:{grid:{color:'rgba(128,128,128,.08)'},ticks:{font:{size:11}},beginAtZero:false} } }
+  });
+
+  // Overdue + at-risk lines
+  destroyChart('hist-sla');
+  chartRefs['hist-sla'] = new Chart(document.getElementById('hist-sla').getContext('2d'), {
+    type:'line',
+    data:{ labels, datasets:[
+      { label:'Overdue', data:dates.map(d=>h[d].overdue), borderColor:'#E24B4A', backgroundColor:'rgba(226,75,74,.07)', borderWidth:2, pointRadius:4, pointBackgroundColor:'#E24B4A', fill:true, tension:0.3 },
+      { label:'At risk', data:dates.map(d=>h[d].atrisk),  borderColor:'#BA7517', backgroundColor:'rgba(186,117,23,.07)', borderWidth:2, pointRadius:4, pointBackgroundColor:'#BA7517', fill:true, tension:0.3 }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:true, position:'top', labels:{font:{size:11},boxWidth:10,padding:12} } },
+      scales:{ x:{grid:{color:'rgba(128,128,128,.08)'},ticks:{font:{size:11}}}, y:{grid:{color:'rgba(128,128,128,.08)'},ticks:{font:{size:11}},beginAtZero:true} }
+    }
+  });
+
+  // Team stacked bar
+  const allTeams = [...new Set(dates.flatMap(d => Object.keys(h[d].by_team||{})))].sort();
+  destroyChart('hist-teams');
+  chartRefs['hist-teams'] = new Chart(document.getElementById('hist-teams').getContext('2d'), {
+    type:'bar',
+    data:{ labels, datasets: allTeams.map((team,i) => ({
+      label: team,
+      data: dates.map(d => (h[d].by_team||{})[team] || 0),
+      backgroundColor: PALETTE[i % PALETTE.length],
+      borderSkipped: false
+    }))},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:true, position:'bottom', labels:{font:{size:10},boxWidth:8,padding:8} } },
+      scales:{ x:{stacked:true,grid:{display:false},ticks:{font:{size:11}}}, y:{stacked:true,grid:{color:'rgba(128,128,128,.08)'},ticks:{font:{size:11}}} }
+    }
+  });
+
+  // Overdue by team stacked bar
+  const allODTeams = [...new Set(dates.flatMap(d => Object.keys(h[d].overdue_by_team||{})))].sort();
+  destroyChart('hist-overdue-teams');
+  chartRefs['hist-overdue-teams'] = new Chart(document.getElementById('hist-overdue-teams').getContext('2d'), {
+    type:'bar',
+    data:{ labels, datasets: allODTeams.map((team,i) => ({
+      label: team,
+      data: dates.map(d => (h[d].overdue_by_team||{})[team] || 0),
+      backgroundColor: PALETTE[i % PALETTE.length],
+      borderSkipped: false
+    }))},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:true, position:'bottom', labels:{font:{size:10},boxWidth:8,padding:8} } },
+      scales:{ x:{stacked:true,grid:{display:false},ticks:{font:{size:11}}}, y:{stacked:true,grid:{color:'rgba(128,128,128,.08)'},ticks:{font:{size:11}}} }
+    }
+  });
+
+  // Snapshot list
+  document.getElementById('snapshot-list').innerHTML = [...dates].reverse().map(d => {
+    const s = h[d];
+    const topTeam = Object.entries(s.by_team||{}).sort((a,b)=>b[1]-a[1])[0];
+    const isTodaySnap = d === todayStr;
+    return `<div class="snapshot-row">
+      <span class="snapshot-date">${fmtDate(d)}${isTodaySnap ? ' <span style="font-size:10px;color:#3B6D11;font-weight:400;">today</span>' : ''}</span>
+      <div class="snapshot-stats">
+        <span class="snapshot-stat">Total <span>${s.total}</span></span>
+        <span class="snapshot-stat">Overdue <span style="color:#E24B4A">${s.overdue}</span></span>
+        <span class="snapshot-stat">At risk <span style="color:#BA7517">${s.atrisk}</span></span>
+        ${topTeam ? `<span class="snapshot-stat">Top team <span>${topTeam[0]} (${topTeam[1]})</span></span>` : ''}
+      </div>
+      <span class="snapshot-del" onclick="deleteSnapshot('${d}')" title="Delete snapshot">✕</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Load ──────────────────────────────────────────────────────────────────────
 
 function loadData(text) {
   const parsed = parseCSV(text);
@@ -509,6 +664,7 @@ function loadData(text) {
   buildSelects();
   document.getElementById('data-sub').textContent = `${rawData.length.toLocaleString()} tasks loaded`;
   renderAll();
+  saveSnapshot(rawData);
 }
 
 function loadPasted() {
@@ -517,9 +673,11 @@ function loadPasted() {
   loadData(text);
 }
 
+document.getElementById('today-date-label').textContent = todayStr;
 document.getElementById('paste-area').addEventListener('keydown', e => {
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) loadPasted();
 });
+updateBadge();
 </script>
 </body>
 </html>
