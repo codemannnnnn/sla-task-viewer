@@ -651,9 +651,29 @@ function renderHistory() {
   }).join('');
 }
 
+// ── Raw data persistence ──────────────────────────────────────────────────────
+
+const RAW_KEY = 'sla_rawdata_v1';
+
+function saveRawData(data) {
+  try {
+    localStorage.setItem(RAW_KEY, JSON.stringify({ date: todayStr, rows: data }));
+  } catch(e) {
+    // If storage is full, raw data save is skipped silently — snapshots take priority
+  }
+}
+
+function restoreRawData() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(RAW_KEY) || 'null');
+    if (!stored || !stored.rows || !stored.rows.length) return null;
+    return stored; // { date, rows }
+  } catch(e) { return null; }
+}
+
 // ── Load ──────────────────────────────────────────────────────────────────────
 
-function loadData(text) {
+function loadData(text, isRestore) {
   const parsed = parseCSV(text);
   if (!parsed.length || !Object.keys(parsed[0]).length) {
     document.getElementById('paste-err').style.display = 'block';
@@ -662,15 +682,22 @@ function loadData(text) {
   document.getElementById('paste-err').style.display = 'none';
   rawData = parsed;
   buildSelects();
-  document.getElementById('data-sub').textContent = `${rawData.length.toLocaleString()} tasks loaded`;
+  if (isRestore) {
+    const stored = restoreRawData();
+    const dateLabel = stored && stored.date !== todayStr ? ` (from ${fmtDate(stored.date)})` : '';
+    document.getElementById('data-sub').textContent = `${rawData.length.toLocaleString()} tasks restored from last session${dateLabel}`;
+  } else {
+    document.getElementById('data-sub').textContent = `${rawData.length.toLocaleString()} tasks loaded`;
+    saveRawData(rawData);
+    saveSnapshot(rawData);
+  }
   renderAll();
-  saveSnapshot(rawData);
 }
 
 function loadPasted() {
   const text = document.getElementById('paste-area').value.trim();
   if (!text) return;
-  loadData(text);
+  loadData(text, false);
 }
 
 document.getElementById('today-date-label').textContent = todayStr;
@@ -678,6 +705,16 @@ document.getElementById('paste-area').addEventListener('keydown', e => {
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) loadPasted();
 });
 updateBadge();
+
+// Auto-restore last session's raw data
+(function() {
+  const stored = restoreRawData();
+  if (!stored || !stored.rows || !stored.rows.length) return;
+  // Re-serialize rows back to TSV so parseCSV can handle it
+  const headers = Object.keys(stored.rows[0]);
+  const tsv = [headers.join('\t'), ...stored.rows.map(r => headers.map(h => r[h]||'').join('\t'))].join('\n');
+  loadData(tsv, true);
+})();
 </script>
 </body>
 </html>
