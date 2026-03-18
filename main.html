@@ -262,12 +262,13 @@
             <th>Team</th>
             <th>Assignee</th>
             <th>Status</th>
-            <th>Due Date</th>
+            <th>WA Due Date</th>
+            <th>Task Due Date</th>
             <th>SLA Status</th>
           </tr>
         </thead>
         <tbody id="task-tbody">
-          <tr><td colspan="8" class="empty-state">Load data above to see tasks</td></tr>
+          <tr><td colspan="9" class="empty-state">Load data above to see tasks</td></tr>
         </tbody>
       </table>
     </div>
@@ -288,7 +289,7 @@ function parseDue(s) {
 }
 
 function slaStatus(row) {
-  const due = parseDue(row['Task Due Date'] || row['WA Due Date']);
+  const due = parseDue(row['WA Due Date'] || row['Task Due Date']);
   if (!due) return 'unknown';
   const d = new Date(due); d.setHours(0,0,0,0);
   const diff = Math.floor((d - today) / 86400000);
@@ -466,13 +467,13 @@ function renderAssigneeBar(data) {
 
 function renderTable(data) {
   const sorted = [...data].sort((a, b) => {
-    const da = parseDue(a['Task Due Date']) || new Date(9999, 0);
-    const db = parseDue(b['Task Due Date']) || new Date(9999, 0);
+    const da = parseDue(a['WA Due Date']) || parseDue(a['Task Due Date']) || new Date(9999, 0);
+    const db = parseDue(b['WA Due Date']) || parseDue(b['Task Due Date']) || new Date(9999, 0);
     return da - db;
   }).slice(0, 200);
   document.getElementById('table-count').textContent = `(${Math.min(data.length, 200)} of ${data.length})`;
   const tbody = document.getElementById('task-tbody');
-  if (!sorted.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No matching tasks</td></tr>'; return; }
+  if (!sorted.length) { tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No matching tasks</td></tr>'; return; }
   tbody.innerHTML = sorted.map(r => {
     const sl = slaStatus(r);
     const badge =
@@ -480,7 +481,8 @@ function renderTable(data) {
       sl === 'atrisk'  ? '<span class="badge atrisk">At risk</span>' :
       sl === 'ok'      ? '<span class="badge ok">On track</span>' :
                          '<span class="badge neutral">—</span>';
-    const dueStr = (r['Task Due Date'] || r['WA Due Date'] || '—').split(' ')[0];
+    const waStr   = (r['WA Due Date']   || '—').split(' ')[0];
+    const taskStr = (r['Task Due Date'] || '—').split(' ')[0];
     const subj = (r['Subject'] || '').slice(0, 60) + ((r['Subject'] || '').length > 60 ? '…' : '');
     return `<tr>
       <td style="font-family:var(--mono);font-size:11px;">${r['Task ID'] || '—'}</td>
@@ -489,7 +491,8 @@ function renderTable(data) {
       <td>${r['rEntityName'] || '—'}</td>
       <td>${r['Assignee'] || '—'}</td>
       <td style="max-width:160px;font-size:11px;" title="${r['Status']||''}">${(r['Status'] || '—').slice(0, 45)}</td>
-      <td style="font-size:11px;white-space:nowrap;">${dueStr}</td>
+      <td style="font-size:11px;white-space:nowrap;">${waStr}</td>
+      <td style="font-size:11px;white-space:nowrap;color:var(--text2);">${taskStr}</td>
       <td>${badge}</td>
     </tr>`;
   }).join('');
