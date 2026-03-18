@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SLA Task Monitor</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #ffffff;
+    --bg2:      #f5f5f3;
+    --bg3:      #eeecea;
+    --text:     #1a1a18;
+    --text2:    #6b6a65;
+    --text3:    #9c9a92;
+    --border:   rgba(0,0,0,0.12);
+    --border2:  rgba(0,0,0,0.22);
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:      #1c1c1a;
+      --bg2:     #242422;
+      --bg3:     #2c2c2a;
+      --text:    #e8e6de;
+      --text2:   #9c9a92;
+      --text3:   #6b6a65;
+      --border:  rgba(255,255,255,0.10);
+      --border2: rgba(255,255,255,0.20);
+    }
+  }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg2);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  .page { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
+
+  /* Header */
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 8px; }
+  .header-title { font-size: 18px; font-weight: 500; color: var(--text); }
+  .header-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+  /* Paste box */
+  .paste-box {
+    background: var(--bg);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+  .paste-label { font-size: 12px; color: var(--text2); margin-bottom: 6px; display: block; }
+  .paste-row { display: flex; gap: 8px; align-items: flex-start; }
+  .paste-row textarea {
+    flex: 1;
+    font-size: 12px;
+    font-family: var(--mono);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius-md);
+    padding: 8px;
+    background: var(--bg2);
+    color: var(--text);
+    resize: vertical;
+    min-height: 64px;
+    max-height: 160px;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .paste-row textarea:focus { border-color: #378ADD; }
+  .load-btn {
+    font-size: 12px;
+    padding: 7px 18px;
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius-md);
+    background: var(--bg);
+    color: var(--text);
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: background .15s;
+  }
+  .load-btn:hover { background: var(--bg2); }
+  .load-btn:active { transform: scale(.98); }
+  .err { font-size: 11px; color: #A32D2D; margin-top: 6px; display: none; }
+
+  /* Filters */
+  .filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1.25rem; }
+  select {
+    font-size: 12px;
+    padding: 5px 10px;
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius-md);
+    background: var(--bg);
+    color: var(--text);
+    cursor: pointer;
+    outline: none;
+  }
+  select:focus { border-color: #378ADD; }
+
+  /* Metrics */
+  .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 1.25rem; }
+  .metric { background: var(--bg3); border-radius: var(--radius-md); padding: 1rem; }
+  .metric .mlabel { font-size: 12px; color: var(--text2); margin-bottom: 6px; }
+  .metric .mval { font-size: 26px; font-weight: 500; }
+  .metric .msub { font-size: 11px; margin-top: 3px; }
+
+  /* Cards */
+  .card {
+    background: var(--bg);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.25rem;
+  }
+  .card-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: .75rem; }
+
+  /* Chart rows */
+  .charts-row { display: grid; gap: 12px; margin-bottom: 12px; }
+  .row-2 { grid-template-columns: 1fr 1fr; }
+  .row-3 { grid-template-columns: 1.4fr 1fr 1fr; }
+
+  /* Legend */
+  .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 8px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text2); }
+  .legend-swatch { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+  /* Table */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; font-size: 12px; border-collapse: collapse; }
+  th { font-weight: 500; text-align: left; padding: 7px 10px; border-bottom: 0.5px solid var(--border2); color: var(--text2); font-size: 11px; }
+  td { padding: 7px 10px; border-bottom: 0.5px solid var(--border); color: var(--text); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg2); }
+
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 500; }
+  .overdue { background: #FCEBEB; color: #A32D2D; }
+  .atrisk  { background: #FAEEDA; color: #854F0B; }
+  .ok      { background: #EAF3DE; color: #3B6D11; }
+  .neutral { background: var(--bg3); color: var(--text2); }
+
+  .empty-state { padding: 2.5rem; text-align: center; font-size: 13px; color: var(--text2); }
+
+  @media (max-width: 700px) {
+    .metrics { grid-template-columns: repeat(2, 1fr); }
+    .row-2, .row-3 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <div class="header-title">SLA Task Monitor</div>
+      <div class="header-sub" id="data-sub">No data loaded — paste your CSV below</div>
+    </div>
+  </div>
+
+  <!-- Paste box -->
+  <div class="paste-box">
+    <span class="paste-label">Paste tab- or comma-separated data (include header row) — Ctrl+Enter to load</span>
+    <div class="paste-row">
+      <textarea id="paste-area" placeholder="Client&#9;Task ID&#9;Task Type&#9;Subject&#9;Status&#9;Assignee&#9;WA Due Date&#9;Task Due Date&#9;rEntityName&#9;Rnk&#10;..."></textarea>
+      <button class="load-btn" onclick="loadPasted()">Load</button>
+    </div>
+    <div class="err" id="paste-err">Could not parse data — make sure the first row contains column headers.</div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-row">
+    <select id="filter-entity" onchange="renderAll()"><option value="">All teams</option></select>
+    <select id="filter-status" onchange="renderAll()"><option value="">All statuses</option></select>
+    <select id="filter-client" onchange="renderAll()"><option value="">All clients</option></select>
+  </div>
+
+  <!-- Metrics -->
+  <div class="metrics">
+    <div class="metric">
+      <div class="mlabel">Total tasks</div>
+      <div class="mval" id="m-total">—</div>
+    </div>
+    <div class="metric">
+      <div class="mlabel">Overdue</div>
+      <div class="mval" id="m-overdue" style="color:#E24B4A;">—</div>
+      <div class="msub" id="m-overdue-pct" style="color:#A32D2D;"></div>
+    </div>
+    <div class="metric">
+      <div class="mlabel">At risk (≤3 days)</div>
+      <div class="mval" id="m-atrisk" style="color:#BA7517;">—</div>
+      <div class="msub" id="m-atrisk-pct" style="color:#854F0B;"></div>
+    </div>
+    <div class="metric">
+      <div class="mlabel">Teams active</div>
+      <div class="mval" id="m-teams">—</div>
+    </div>
+  </div>
+
+  <!-- Row 1: entity bar + status donut -->
+  <div class="charts-row row-2">
+    <div class="card">
+      <div class="card-title">Tasks by team (rEntityName)</div>
+      <div style="position:relative;width:100%;" id="bar-wrap">
+        <canvas id="chart-entity" height="220"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Status distribution</div>
+      <div id="legend-status" class="legend"></div>
+      <div style="position:relative;height:180px;">
+        <canvas id="chart-status"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 2: overdue + task type + assignee -->
+  <div class="charts-row row-3">
+    <div class="card">
+      <div class="card-title">Overdue tasks by team</div>
+      <div style="position:relative;width:100%;" id="overdue-wrap">
+        <canvas id="chart-overdue" height="180"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Task types</div>
+      <div id="legend-type" class="legend"></div>
+      <div style="position:relative;height:150px;">
+        <canvas id="chart-type"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Assignee load</div>
+      <div style="position:relative;height:150px;">
+        <canvas id="chart-assignee"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="card">
+    <div class="card-title">
+      Task detail
+      <span id="table-count" style="font-weight:400;color:var(--text2);font-size:11px;"></span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Task ID</th>
+            <th>Client</th>
+            <th>Subject</th>
+            <th>Team</th>
+            <th>Assignee</th>
+            <th>Status</th>
+            <th>Due Date</th>
+            <th>SLA Status</th>
+          </tr>
+        </thead>
+        <tbody id="task-tbody">
+          <tr><td colspan="8" class="empty-state">Load data above to see tasks</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /page -->
+
+<script>
+const PALETTE = ['#378ADD','#1D9E75','#D85A30','#D4537E','#BA7517','#7F77DD','#639922','#888780','#185FA5','#0F6E56'];
+let rawData = [];
+let chartRefs = {};
+const today = new Date(); today.setHours(0,0,0,0);
+
+function parseDue(s) {
+  if (!s) return null;
+  const d = new Date(s);
+  return isNaN(d) ? null : d;
+}
+
+function slaStatus(row) {
+  const due = parseDue(row['Task Due Date'] || row['WA Due Date']);
+  if (!due) return 'unknown';
+  const d = new Date(due); d.setHours(0,0,0,0);
+  const diff = Math.floor((d - today) / 86400000);
+  if (diff < 0) return 'overdue';
+  if (diff <= 3) return 'atrisk';
+  return 'ok';
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (!lines.length) return [];
+  const delim = lines[0].includes('\t') ? '\t' : ',';
+  const headers = lines[0].split(delim).map(h => h.trim().replace(/^"|"$/g, ''));
+  return lines.slice(1).filter(l => l.trim()).map(line => {
+    const vals = line.split(delim).map(v => v.trim().replace(/^"|"$/g, ''));
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = vals[i] || '');
+    return obj;
+  });
+}
+
+function getFiltered() {
+  const entity = document.getElementById('filter-entity').value;
+  const status = document.getElementById('filter-status').value;
+  const client = document.getElementById('filter-client').value;
+  return rawData.filter(r =>
+    (!entity || r['rEntityName'] === entity) &&
+    (!status || r['Status'] === status) &&
+    (!client || r['Client'] === client)
+  );
+}
+
+function buildSelects() {
+  const entities = [...new Set(rawData.map(r => r['rEntityName']).filter(Boolean))].sort();
+  const statuses = [...new Set(rawData.map(r => r['Status']).filter(Boolean))].sort();
+  const clients  = [...new Set(rawData.map(r => r['Client']).filter(Boolean))].sort();
+  function fill(id, vals, label) {
+    const sel = document.getElementById(id);
+    const cur = sel.value;
+    sel.innerHTML = `<option value="">All ${label}</option>` +
+      vals.map(v => `<option${v === cur ? ' selected' : ''}>${v}</option>`).join('');
+  }
+  fill('filter-entity', entities, 'teams');
+  fill('filter-status', statuses, 'statuses');
+  fill('filter-client', clients, 'clients');
+}
+
+function destroyChart(key) {
+  if (chartRefs[key]) { chartRefs[key].destroy(); delete chartRefs[key]; }
+}
+
+function renderAll() {
+  const data = getFiltered();
+  if (!data.length) return;
+
+  const overdueCnt = data.filter(r => slaStatus(r) === 'overdue').length;
+  const atRiskCnt  = data.filter(r => slaStatus(r) === 'atrisk').length;
+  const teams      = new Set(data.map(r => r['rEntityName']).filter(Boolean));
+
+  document.getElementById('m-total').textContent   = data.length.toLocaleString();
+  document.getElementById('m-overdue').textContent = overdueCnt;
+  document.getElementById('m-atrisk').textContent  = atRiskCnt;
+  document.getElementById('m-teams').textContent   = teams.size;
+  document.getElementById('m-overdue-pct').textContent = data.length ? Math.round(overdueCnt / data.length * 100) + '% of total' : '';
+  document.getElementById('m-atrisk-pct').textContent  = data.length ? Math.round(atRiskCnt  / data.length * 100) + '% of total' : '';
+
+  renderEntityBar(data);
+  renderStatusDonut(data);
+  renderOverdueBar(data);
+  renderTypeDonut(data);
+  renderAssigneeBar(data);
+  renderTable(data);
+}
+
+function renderEntityBar(data) {
+  const counts = {};
+  data.forEach(r => { const e = r['rEntityName'] || 'Unknown'; counts[e] = (counts[e] || 0) + 1; });
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  const labels = sorted.map(x => x[0]);
+  const vals   = sorted.map(x => x[1]);
+  document.getElementById('bar-wrap').style.height = Math.max(180, labels.length * 32 + 60) + 'px';
+  destroyChart('entity');
+  chartRefs.entity = new Chart(document.getElementById('chart-entity').getContext('2d'), {
+    type: 'bar',
+    data: { labels, datasets: [{ data: vals, backgroundColor: PALETTE.slice(0, labels.length), borderRadius: 4, borderSkipped: false }] },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${c.raw} tasks` } } },
+      scales: {
+        x: { grid: { color: 'rgba(128,128,128,.1)' }, ticks: { font: { size: 11 } } },
+        y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+function renderStatusDonut(data) {
+  const counts = {};
+  data.forEach(r => { const s = r['Status'] || 'Unknown'; counts[s] = (counts[s] || 0) + 1; });
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const labels = sorted.map(x => x[0]);
+  const vals   = sorted.map(x => x[1]);
+  const total  = vals.reduce((a, b) => a + b, 0);
+  document.getElementById('legend-status').innerHTML = labels.map((l, i) =>
+    `<span class="legend-item"><span class="legend-swatch" style="background:${PALETTE[i % PALETTE.length]}"></span>${l} ${Math.round(vals[i] / total * 100)}%</span>`
+  ).join('');
+  destroyChart('status');
+  chartRefs.status = new Chart(document.getElementById('chart-status').getContext('2d'), {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data: vals, backgroundColor: PALETTE.slice(0, labels.length), borderWidth: 0, hoverOffset: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${c.label}: ${c.raw}` } } } }
+  });
+}
+
+function renderOverdueBar(data) {
+  const od = {};
+  data.filter(r => slaStatus(r) === 'overdue').forEach(r => { const e = r['rEntityName'] || 'Unknown'; od[e] = (od[e] || 0) + 1; });
+  const sorted = Object.entries(od).sort((a, b) => b[1] - a[1]);
+  const labels = sorted.map(x => x[0]);
+  const vals   = sorted.map(x => x[1]);
+  document.getElementById('overdue-wrap').style.height = Math.max(120, labels.length * 28 + 60) + 'px';
+  destroyChart('overdue');
+  chartRefs.overdue = new Chart(document.getElementById('chart-overdue').getContext('2d'), {
+    type: 'bar',
+    data: { labels, datasets: [{ data: vals, backgroundColor: '#E24B4A', borderRadius: 4, borderSkipped: false }] },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: 'rgba(128,128,128,.1)' }, ticks: { font: { size: 10 }, stepSize: 1 } },
+        y: { grid: { display: false }, ticks: { font: { size: 10 } } }
+      }
+    }
+  });
+}
+
+function renderTypeDonut(data) {
+  const counts = {};
+  data.forEach(r => { const t = r['Task Type'] || 'Unknown'; counts[t] = (counts[t] || 0) + 1; });
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  const labels = sorted.map(x => x[0]);
+  const vals   = sorted.map(x => x[1]);
+  const total  = vals.reduce((a, b) => a + b, 0);
+  document.getElementById('legend-type').innerHTML = labels.map((l, i) =>
+    `<span class="legend-item"><span class="legend-swatch" style="background:${PALETTE[i % PALETTE.length]}"></span>${l} ${Math.round(vals[i] / total * 100)}%</span>`
+  ).join('');
+  destroyChart('type');
+  chartRefs.type = new Chart(document.getElementById('chart-type').getContext('2d'), {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data: vals, backgroundColor: PALETTE.slice(0, labels.length), borderWidth: 0, hoverOffset: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${c.label}: ${c.raw}` } } } }
+  });
+}
+
+function renderAssigneeBar(data) {
+  const counts = {};
+  data.forEach(r => { const a = r['Assignee'] || 'Unassigned'; counts[a] = (counts[a] || 0) + 1; });
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const labels = sorted.map(x => x[0]);
+  const vals   = sorted.map(x => x[1]);
+  destroyChart('assignee');
+  chartRefs.assignee = new Chart(document.getElementById('chart-assignee').getContext('2d'), {
+    type: 'bar',
+    data: { labels, datasets: [{ data: vals, backgroundColor: PALETTE[5], borderRadius: 4, borderSkipped: false }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 35 } },
+        y: { grid: { color: 'rgba(128,128,128,.1)' }, ticks: { font: { size: 10 }, stepSize: 1 } }
+      }
+    }
+  });
+}
+
+function renderTable(data) {
+  const sorted = [...data].sort((a, b) => {
+    const da = parseDue(a['Task Due Date']) || new Date(9999, 0);
+    const db = parseDue(b['Task Due Date']) || new Date(9999, 0);
+    return da - db;
+  }).slice(0, 200);
+  document.getElementById('table-count').textContent = `(${Math.min(data.length, 200)} of ${data.length})`;
+  const tbody = document.getElementById('task-tbody');
+  if (!sorted.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No matching tasks</td></tr>'; return; }
+  tbody.innerHTML = sorted.map(r => {
+    const sl = slaStatus(r);
+    const badge =
+      sl === 'overdue' ? '<span class="badge overdue">Overdue</span>' :
+      sl === 'atrisk'  ? '<span class="badge atrisk">At risk</span>' :
+      sl === 'ok'      ? '<span class="badge ok">On track</span>' :
+                         '<span class="badge neutral">—</span>';
+    const dueStr = (r['Task Due Date'] || r['WA Due Date'] || '—').split(' ')[0];
+    const subj = (r['Subject'] || '').slice(0, 60) + ((r['Subject'] || '').length > 60 ? '…' : '');
+    return `<tr>
+      <td style="font-family:var(--mono);font-size:11px;">${r['Task ID'] || '—'}</td>
+      <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['Client']||''}">${(r['Client'] || '—').slice(0, 35)}</td>
+      <td style="max-width:220px;" title="${r['Subject']||''}">${subj}</td>
+      <td>${r['rEntityName'] || '—'}</td>
+      <td>${r['Assignee'] || '—'}</td>
+      <td style="max-width:160px;font-size:11px;" title="${r['Status']||''}">${(r['Status'] || '—').slice(0, 45)}</td>
+      <td style="font-size:11px;white-space:nowrap;">${dueStr}</td>
+      <td>${badge}</td>
+    </tr>`;
+  }).join('');
+}
+
+function loadData(text) {
+  const parsed = parseCSV(text);
+  if (!parsed.length || !Object.keys(parsed[0]).length) {
+    document.getElementById('paste-err').style.display = 'block';
+    return;
+  }
+  document.getElementById('paste-err').style.display = 'none';
+  rawData = parsed;
+  buildSelects();
+  document.getElementById('data-sub').textContent = `${rawData.length.toLocaleString()} tasks loaded`;
+  renderAll();
+}
+
+function loadPasted() {
+  const text = document.getElementById('paste-area').value.trim();
+  if (!text) return;
+  loadData(text);
+}
+
+document.getElementById('paste-area').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) loadPasted();
+});
+</script>
+</body>
+</html>
