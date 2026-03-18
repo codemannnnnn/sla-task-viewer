@@ -689,7 +689,9 @@ function loadData(text, isRestore) {
   } else {
     document.getElementById('data-sub').textContent = `${rawData.length.toLocaleString()} tasks loaded`;
     saveRawData(rawData);
-    saveSnapshot(rawData);
+    // Only snapshot the first paste of the day — morning baseline wins
+    const h = loadHistory();
+    if (!h[todayStr]) saveSnapshot(rawData);
   }
   renderAll();
 }
