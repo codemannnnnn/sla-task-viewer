@@ -177,6 +177,20 @@
       </div>
     </div>
 
+    <div class="metrics" style="grid-template-columns: repeat(2, minmax(0,1fr)); margin-bottom:1.25rem;">
+      <div class="metric">
+        <div class="mlabel">On-time delivery</div>
+        <div class="mval" id="m-delivery-pct" style="color:#3B6D11;">—</div>
+        <div class="msub" id="m-delivery-sub" style="color:var(--text2);"></div>
+        <div class="mdelta" id="d-delivery"></div>
+      </div>
+      <div class="metric">
+        <div class="mlabel">Missed (not yet delivered)</div>
+        <div class="mval" id="m-delivery-missed" style="color:#E24B4A;">—</div>
+        <div class="msub" style="color:var(--text2);font-size:11px;">Other status, past Task Due Date</div>
+      </div>
+    </div>
+
     <div class="charts-row row-2">
       <div class="card">
         <div class="card-title">Tasks by team</div>
@@ -355,6 +369,27 @@ function renderDelta(cur, prev, higherIsBad) {
   return `<span class="${cls}">${sign}${diff} vs prior snapshot</span>`;
 }
 
+function calcDelivery(data) {
+  // On time: Client Acceptance AND WA Due Date <= Task Due Date
+  // Late delivered: Client Acceptance AND WA Due Date > Task Due Date
+  // Missed: any other status AND today > Task Due Date
+  let onTime = 0, lateDelivered = 0, missed = 0;
+  data.forEach(r => {
+    const taskDue = parseDue(r['Task Due Date']);
+    const waDue   = parseDue(r['WA Due Date']);
+    const isClientAcceptance = (r['Status'] || '') === 'Client Acceptance';
+    if (isClientAcceptance) {
+      if (taskDue && waDue && waDue <= taskDue) onTime++;
+      else lateDelivered++;
+    } else {
+      if (taskDue && today > taskDue) missed++;
+    }
+  });
+  const total = onTime + lateDelivered + missed;
+  const pct   = total > 0 ? Math.round(onTime / total * 100) : null;
+  return { onTime, lateDelivered, missed, total, pct };
+}
+
 // ── History storage ───────────────────────────────────────────────────────────
 
 function loadHistory() {
@@ -376,11 +411,17 @@ function buildSnapshot(data) {
     by_status[s] = (by_status[s] || 0) + 1;
     if (slaStatus(r) === 'overdue') overdue_by_team[t] = (overdue_by_team[t] || 0) + 1;
   });
+  const delivery = calcDelivery(data);
   return {
-    total:     data.length,
-    ops_total: data.filter(r => OPS_TEAMS.has(r['rEntityName'])).length,
-    overdue:   data.filter(r => slaStatus(r) === 'overdue').length,
-    atrisk:    data.filter(r => slaStatus(r) === 'atrisk').length,
+    total:            data.length,
+    ops_total:        data.filter(r => OPS_TEAMS.has(r['rEntityName'])).length,
+    overdue:          data.filter(r => slaStatus(r) === 'overdue').length,
+    atrisk:           data.filter(r => slaStatus(r) === 'atrisk').length,
+    delivery_pct:     delivery.pct,
+    delivery_ontime:  delivery.onTime,
+    delivery_late:    delivery.lateDelivered,
+    delivery_missed:  delivery.missed,
+    delivery_total:   delivery.total,
     by_team, by_status, overdue_by_team
   };
 }
@@ -459,6 +500,7 @@ function renderAll() {
   const overdueCnt = data.filter(r => slaStatus(r) === 'overdue').length;
   const atRiskCnt  = data.filter(r => slaStatus(r) === 'atrisk').length;
   const teamsCnt   = new Set(data.map(r => r['rEntityName']).filter(Boolean)).size;
+  const delivery   = calcDelivery(data);
 
   const h = loadHistory();
   const dates = Object.keys(h).sort();
@@ -475,6 +517,14 @@ function renderAll() {
   document.getElementById('d-overdue').innerHTML = renderDelta(overdueCnt,  prev?.overdue, true);
   document.getElementById('d-atrisk').innerHTML  = renderDelta(atRiskCnt,   prev?.atrisk,  true);
   document.getElementById('d-teams').innerHTML   = renderDelta(teamsCnt, prev ? Object.keys(prev.by_team||{}).length : null, false);
+
+  document.getElementById('m-delivery-pct').textContent    = delivery.pct != null ? delivery.pct + '%' : '—';
+  document.getElementById('m-delivery-pct').style.color    = delivery.pct == null ? 'var(--text)' : delivery.pct >= 80 ? '#3B6D11' : delivery.pct >= 60 ? '#BA7517' : '#E24B4A';
+  document.getElementById('m-delivery-sub').textContent    = delivery.total > 0 ? `${delivery.onTime} of ${delivery.total} tasks` : '';
+  document.getElementById('m-delivery-missed').textContent = delivery.missed;
+  document.getElementById('d-delivery').innerHTML = prev?.delivery_pct != null
+    ? renderDelta(delivery.pct, prev.delivery_pct, false)
+    : '';
 
   renderEntityBar(data);
   renderStatusDonut(data);
@@ -669,6 +719,7 @@ function renderHistory() {
       <div class="snapshot-stats">
         <span class="snapshot-stat">Total <span>${s.total}</span></span>
         <span class="snapshot-stat">Ops <span>${s.ops_total ?? '—'}</span></span>
+        <span class="snapshot-stat">On-time <span style="color:${s.delivery_pct == null ? 'inherit' : s.delivery_pct >= 80 ? '#3B6D11' : s.delivery_pct >= 60 ? '#BA7517' : '#E24B4A'}">${s.delivery_pct != null ? s.delivery_pct+'%' : '—'}</span></span>
         <span class="snapshot-stat">Overdue <span style="color:#E24B4A">${s.overdue}</span></span>
         <span class="snapshot-stat">At risk <span style="color:#BA7517">${s.atrisk}</span></span>
         ${topTeam ? `<span class="snapshot-stat">Top team <span>${topTeam[0]} (${topTeam[1]})</span></span>` : ''}
