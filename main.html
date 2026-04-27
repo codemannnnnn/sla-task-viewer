@@ -411,10 +411,12 @@ function buildSnapshot(data) {
     by_status[s] = (by_status[s] || 0) + 1;
     if (slaStatus(r) === 'overdue') overdue_by_team[t] = (overdue_by_team[t] || 0) + 1;
   });
-  const delivery = calcDelivery(data);
+  const delivery  = calcDelivery(data);
+  const ops_count = data.filter(r => OPS_TEAMS.has(r['rEntityName'])).length;
   return {
     total:            data.length,
-    ops_total:        data.filter(r => OPS_TEAMS.has(r['rEntityName'])).length,
+    ops_starting:     ops_count,
+    ops_ending:       ops_count,
     overdue:          data.filter(r => slaStatus(r) === 'overdue').length,
     atrisk:           data.filter(r => slaStatus(r) === 'atrisk').length,
     delivery_pct:     delivery.pct,
@@ -426,9 +428,23 @@ function buildSnapshot(data) {
   };
 }
 
-function saveSnapshot(data) {
-  const h = loadHistory();
-  h[todayStr] = buildSnapshot(data);
+function saveSnapshot(data, isFirstOfDay) {
+  const h       = loadHistory();
+  const snap    = buildSnapshot(data);
+  const ops_count = data.filter(r => OPS_TEAMS.has(r['rEntityName'])).length;
+
+  if (isFirstOfDay) {
+    // First paste: write full snapshot, set both ops values
+    h[todayStr] = snap;
+  } else {
+    // Subsequent pastes: only update ops_ending on today's existing snapshot
+    if (h[todayStr]) {
+      h[todayStr].ops_ending = ops_count;
+    } else {
+      h[todayStr] = snap;
+    }
+  }
+
   if (saveHistory(h)) {
     document.getElementById('save-notice').style.display = 'block';
     setTimeout(() => document.getElementById('save-notice').style.display = 'none', 3000);
@@ -718,7 +734,8 @@ function renderHistory() {
       <span class="snapshot-date">${fmtDate(d)}${isTodaySnap ? ' <span style="font-size:10px;color:#3B6D11;font-weight:400;">today</span>' : ''}</span>
       <div class="snapshot-stats">
         <span class="snapshot-stat">Total <span>${s.total}</span></span>
-        <span class="snapshot-stat">Ops <span>${s.ops_total ?? '—'}</span></span>
+        <span class="snapshot-stat">Ops start <span>${s.ops_starting ?? s.ops_total ?? '—'}</span></span>
+        <span class="snapshot-stat">Ops end <span>${s.ops_ending ?? s.ops_total ?? '—'}</span></span>
         <span class="snapshot-stat">On-time <span style="color:${s.delivery_pct == null ? 'inherit' : s.delivery_pct >= 80 ? '#3B6D11' : s.delivery_pct >= 60 ? '#BA7517' : '#E24B4A'}">${s.delivery_pct != null ? s.delivery_pct+'%' : '—'}</span></span>
         <span class="snapshot-stat">Overdue <span style="color:#E24B4A">${s.overdue}</span></span>
         <span class="snapshot-stat">At risk <span style="color:#BA7517">${s.atrisk}</span></span>
@@ -767,9 +784,9 @@ function loadData(text, isRestore) {
   } else {
     document.getElementById('data-sub').textContent = `${rawData.length.toLocaleString()} tasks loaded`;
     saveRawData(rawData);
-    // Only snapshot the first paste of the day — morning baseline wins
     const h = loadHistory();
-    if (!h[todayStr]) saveSnapshot(rawData);
+    const isFirstOfDay = !h[todayStr];
+    saveSnapshot(rawData, isFirstOfDay);
   }
   renderAll();
 }
