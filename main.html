@@ -50,6 +50,14 @@
   .btn-toggle { border-color: var(--border2); color: var(--text2); }
   .btn-toggle.on { background: #378ADD; border-color: #378ADD; color: #fff; }
   .btn-toggle.on:hover { background: #185FA5; }
+
+  /* Pull button */
+  .btn-pull { background: #378ADD; border-color: #378ADD; color: #fff; }
+  .btn-pull:hover { background: #185FA5; border-color: #185FA5; }
+  .btn-pull:disabled { background: var(--bg3); border-color: var(--border2); color: var(--text3); cursor: not-allowed; transform: none; }
+  .pull-spinner { display: inline-block; width: 10px; height: 10px; border: 1.5px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .6s linear infinite; margin-right: 5px; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
   .err { font-size: 11px; color: #A32D2D; margin-top: 6px; display: none; }
   .save-notice { font-size: 11px; color: #3B6D11; margin-top: 6px; display: none; }
 
@@ -119,7 +127,7 @@
   <div class="header">
     <div>
       <div class="header-title">SLA Task Monitor</div>
-      <div class="header-sub" id="data-sub">No data loaded — paste your CSV below</div>
+      <div class="header-sub" id="data-sub">No data loaded — paste your CSV below or pull live data</div>
     </div>
     <div style="font-size:11px;color:var(--text2);padding-top:4px;" id="snapshot-badge"></div>
   </div>
@@ -140,8 +148,10 @@
       <div class="paste-row">
         <textarea id="paste-area" placeholder="Client&#9;Task ID&#9;Task Type&#9;Subject&#9;Status&#9;Assignee&#9;WA Due Date&#9;Task Due Date&#9;rEntityName&#9;Rnk&#10;..."></textarea>
         <button class="btn" id="load-btn">Load</button>
+        <button class="btn btn-pull" id="pull-btn">↓ Pull Live</button>
       </div>
       <div class="err" id="paste-err">Could not parse data — make sure the first row contains column headers.</div>
+      <div class="err" id="pull-err" style="display:none;"></div>
       <div class="save-notice" id="save-notice">Snapshot saved for today.</div>
     </div>
 
@@ -319,6 +329,22 @@ function parseCSV(text) {
   });
 }
 
+// Map JSON keys from API response to the column names the dashboard expects
+function normalizeApiRow(r) {
+  return {
+    'Client':        r['Client']        || '',
+    'Task ID':       r['Task_ID']       || r['Task ID']       || '',
+    'Task Type':     r['Task_Type']     || r['Task Type']     || '',
+    'Subject':       r['Subject']       || '',
+    'Status':        r['Status']        || '',
+    'Assignee':      r['Assignee']      || '',
+    'WA Due Date':   r['WA_Due_Date']   || r['WA Due Date']   || '',
+    'Task Due Date': r['Task_Due_Date'] || r['Task Due Date'] || '',
+    'rEntityName':   r['rEntityName']   || '',
+    'Rnk':           r['Rnk']           || '',
+  };
+}
+
 const OPS_TEAMS = new Set([
   'Business Analysis - Team Wynn',
   'Configuration - Team Never Laughs',
@@ -334,7 +360,6 @@ function toggleOps() {
   opsMode = !opsMode;
   const btn = document.getElementById('ops-toggle');
   btn.classList.toggle('on', opsMode);
-  // Clear team filter when switching modes so it doesn't conflict
   document.getElementById('filter-entity').value = '';
   renderAll();
 }
@@ -370,9 +395,6 @@ function renderDelta(cur, prev, higherIsBad) {
 }
 
 function calcDelivery(data) {
-  // On time: Client Acceptance AND WA Due Date <= Task Due Date
-  // Late delivered: Client Acceptance AND WA Due Date > Task Due Date
-  // Missed: any other status AND today > Task Due Date
   let onTime = 0, lateDelivered = 0, missed = 0;
   data.forEach(r => {
     const taskDue = parseDue(r['Task Due Date']);
@@ -432,19 +454,15 @@ function saveSnapshot(data, isFirstOfDay) {
   const h       = loadHistory();
   const snap    = buildSnapshot(data);
   const ops_count = data.filter(r => OPS_TEAMS.has(r['rEntityName'])).length;
-
   if (isFirstOfDay) {
-    // First paste: write full snapshot, set both ops values
     h[todayStr] = snap;
   } else {
-    // Subsequent pastes: only update ops_ending on today's existing snapshot
     if (h[todayStr]) {
       h[todayStr].ops_ending = ops_count;
     } else {
       h[todayStr] = snap;
     }
   }
-
   if (saveHistory(h)) {
     document.getElementById('save-notice').style.display = 'block';
     setTimeout(() => document.getElementById('save-notice').style.display = 'none', 3000);
@@ -669,7 +687,6 @@ function renderHistory() {
 
   const labels = dates.map(fmtDate);
 
-  // Total line
   destroyChart('hist-total');
   chartRefs['hist-total'] = new Chart(document.getElementById('hist-total').getContext('2d'), {
     type:'line',
@@ -677,7 +694,6 @@ function renderHistory() {
     options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{grid:{color:'rgba(128,128,128,.08)'},ticks:{font:{size:11}}}, y:{grid:{color:'rgba(128,128,128,.08)'},ticks:{font:{size:11}},beginAtZero:false} } }
   });
 
-  // Overdue + at-risk lines
   destroyChart('hist-sla');
   chartRefs['hist-sla'] = new Chart(document.getElementById('hist-sla').getContext('2d'), {
     type:'line',
@@ -691,7 +707,6 @@ function renderHistory() {
     }
   });
 
-  // Team stacked bar
   const allTeams = [...new Set(dates.flatMap(d => Object.keys(h[d].by_team||{})))].sort();
   destroyChart('hist-teams');
   chartRefs['hist-teams'] = new Chart(document.getElementById('hist-teams').getContext('2d'), {
@@ -708,7 +723,6 @@ function renderHistory() {
     }
   });
 
-  // Overdue by team stacked bar
   const allODTeams = [...new Set(dates.flatMap(d => Object.keys(h[d].overdue_by_team||{})))].sort();
   destroyChart('hist-overdue-teams');
   chartRefs['hist-overdue-teams'] = new Chart(document.getElementById('hist-overdue-teams').getContext('2d'), {
@@ -725,7 +739,6 @@ function renderHistory() {
     }
   });
 
-  // Snapshot list
   document.getElementById('snapshot-list').innerHTML = [...dates].reverse().map(d => {
     const s = h[d];
     const topTeam = Object.entries(s.by_team||{}).sort((a,b)=>b[1]-a[1])[0];
@@ -753,16 +766,14 @@ const RAW_KEY = 'sla_rawdata_v1';
 function saveRawData(data) {
   try {
     localStorage.setItem(RAW_KEY, JSON.stringify({ date: todayStr, rows: data }));
-  } catch(e) {
-    // If storage is full, raw data save is skipped silently — snapshots take priority
-  }
+  } catch(e) {}
 }
 
 function restoreRawData() {
   try {
     const stored = JSON.parse(localStorage.getItem(RAW_KEY) || 'null');
     if (!stored || !stored.rows || !stored.rows.length) return null;
-    return stored; // { date, rows }
+    return stored;
   } catch(e) { return null; }
 }
 
@@ -797,10 +808,67 @@ function loadPasted() {
   loadData(text, false);
 }
 
+// ── Pull Live Data ────────────────────────────────────────────────────────────
+
+async function pullLiveData() {
+  const btn = document.getElementById('pull-btn');
+  const errEl = document.getElementById('pull-err');
+  errEl.style.display = 'none';
+  btn.disabled = true;
+  btn.innerHTML = '<span class="pull-spinner"></span>Pulling…';
+
+  const xmlBody = `<root RuleMarker="1">
+  <Object Name="Entity" ObjectID="1" ObjectPK="1000009">
+    <Association ActionTypeID="1" ObjectID="11">
+      <Property Name="ObjectTypeID" ObjectID="37" ObjectPK="76" PriorValue="" ActionTypeID="2">109973</Property>
+      <Object ObjectID="34" ActionTypeID="1" Selected="1">
+        <Property Name="ObjectTypeID" ObjectID="37" ObjectPK="76" PriorValue="" ActionTypeID="2">12571</Property>
+      </Object>
+    </Association>
+  </Object>
+<UserToken EntityID="1017779" FirstName="Dashboard" MiddleName="" LastName="Interface" EntityName="Dashboard Interface" EntitySecurity="False" NTUserName="DashboardInterface" AdhocReporting="False" AdhocReportingKey="" SecureLoginCode="" QuestionsHistoryID="-1" SystemMFATypeID="0" UserMFATypeID="0" MFASecretOPVID="-1" MFATimeout="0" Expiration="2046-04-22T01:45:43.286"> <UserGroup EntityName="All Users Group">999989</UserGroup> <UserGroup EntityName="GLSuite Universal Administrator">999904</UserGroup> <UserGroup EntityName="GLSuite Universal Configuration">999901</UserGroup> <UserGroup EntityName="GLSuite Universal Correspondence and Reports">999905</UserGroup> <UserGroup EntityName="GLSuite Universal Security Administrator">999903</UserGroup> <UserGroup EntityName="GLSuite Universal Read Write Access">999902</UserGroup> <UserGroup EntityName="gDFPS_S_TS_NetworkAdministration_ITServiceRequest_Contributors">-7</UserGroup> <UserGroup EntityName="gDFPS_S_TS_NetworkAdministration_SystemEvent_Contributors">-10</UserGroup> <UserGroup EntityName="gRole_SystemsAdministrator">-295</UserGroup> <UserGroup EntityName="gDFPS_B_Sales_ProspectSales_Procurement_Contributors">-109</UserGroup> <UserGroup EntityName="gRole_SystemSecurityAdministrator">-312</UserGroup><![CDATA[jOoTCCyUxPQlgOnzUQKWa0Y6chHHrp8+PDaLnzlOGvV4iZHeoddIErLqFkAWy5ucm4Frhy1erz0hy6ZRi/RPKg==]]></UserToken>
+</root>`;
+
+  try {
+    const response = await fetch('/api/proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/xml' },
+      body: xmlBody,
+    });
+
+    if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`);
+
+    const json = await response.json();
+
+    if (!Array.isArray(json) || json.length === 0) {
+      throw new Error('API returned empty or unexpected data. Check proxy logs.');
+    }
+
+    // Normalize API field names to dashboard field names
+    rawData = json.map(normalizeApiRow);
+    buildSelects();
+    document.getElementById('data-sub').textContent = `${rawData.length.toLocaleString()} tasks loaded from live API`;
+    saveRawData(rawData);
+    const h = loadHistory();
+    saveSnapshot(rawData, !h[todayStr]);
+    renderAll();
+
+  } catch (err) {
+    errEl.textContent = `Pull failed: ${err.message}`;
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '↓ Pull Live';
+  }
+}
+
+// ── Event listeners ───────────────────────────────────────────────────────────
+
 document.getElementById('today-date-label').textContent = todayStr;
 document.getElementById('tab-today').addEventListener('click', () => switchTab('today'));
 document.getElementById('tab-history').addEventListener('click', () => switchTab('history'));
 document.getElementById('load-btn').addEventListener('click', loadPasted);
+document.getElementById('pull-btn').addEventListener('click', pullLiveData);
 document.getElementById('ops-toggle').addEventListener('click', toggleOps);
 document.getElementById('clear-history-btn').addEventListener('click', clearAllHistory);
 document.getElementById('filter-entity').addEventListener('change', renderAll);
@@ -815,10 +883,11 @@ document.getElementById('snapshot-list').addEventListener('click', e => {
   const el = e.target.closest('.snapshot-del');
   if (el && el.dataset.date) deleteSnapshot(el.dataset.date);
 });
+
+// Restore raw data from last session on page load
 (function() {
   const stored = restoreRawData();
   if (!stored || !stored.rows || !stored.rows.length) return;
-  // Re-serialize rows back to TSV so parseCSV can handle it
   const headers = Object.keys(stored.rows[0]);
   const tsv = [headers.join('\t'), ...stored.rows.map(r => headers.map(h => r[h]||'').join('\t'))].join('\n');
   loadData(tsv, true);
