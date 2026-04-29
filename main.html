@@ -465,15 +465,19 @@ function saveSnapshot(data) {
   const ops_count = data.filter(r => OPS_TEAMS.has(r['rEntityName'])).length;
 
   if (!h[todayStr]) {
-    // First save of the day — set both start and end
     snap.ops_starting = ops_count;
     snap.ops_ending   = ops_count;
     h[todayStr] = snap;
   } else {
-    // Already have a snapshot today — update stats but NEVER overwrite ops_starting
-    snap.ops_starting = h[todayStr].ops_starting; // preserve original
-    snap.ops_ending   = ops_count;                // always update end
+    snap.ops_starting = h[todayStr].ops_starting;
+    snap.ops_ending   = ops_count;
     h[todayStr] = snap;
+  }
+
+  if (saveHistory(h)) {
+    document.getElementById('save-notice').style.display = 'block';
+    setTimeout(() => document.getElementById('save-notice').style.display = 'none', 3000);
+    updateBadge();
   }
 }
 
