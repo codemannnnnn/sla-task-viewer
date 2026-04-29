@@ -28,26 +28,24 @@ export default async function handler(req, res) {
 
     const xmlText = await response.text();
 
-    // Parse XML rows into JSON using DOMParser-style attribute extraction
+    // Parse every <row ... /> element into a flat object
     const rows = [];
-    const rowRegex = /<row\b([^>]*?)(?:\/?>)/gs;
-    const attrRegex = /(\w+)="([^"]*)"/g;
-
-    let rowMatch;
-    while ((rowMatch = rowRegex.exec(xmlText)) !== null) {
-      const attrs = {};
-      let attrMatch;
-      const attrString = rowMatch[1];
-      while ((attrMatch = attrRegex.exec(attrString)) !== null) {
-        const key = attrMatch[1].replace(/_x0020_/g, "_");
-        attrs[key] = attrMatch[2];
+    let i = 0;
+    while (i < xmlText.length) {
+      const start = xmlText.indexOf("<row ", i);
+      if (start === -1) break;
+      const end = xmlText.indexOf("/>", start);
+      if (end === -1) break;
+      const chunk = xmlText.slice(start + 5, end); // attributes string
+      const obj = {};
+      const attrRe = /(\w+)="([^"]*)"/g;
+      let m;
+      while ((m = attrRe.exec(chunk)) !== null) {
+        const key = m[1].replace(/_x0020_/g, "_");
+        obj[key] = m[2];
       }
-      rows.push(attrs);
-    }
-
-    // Debug: if still empty, return a snippet of the raw XML so we can see what we're dealing with
-    if (rows.length === 0) {
-      return res.status(200).json({ debug: true, snippet: xmlText.substring(0, 500) });
+      if (Object.keys(obj).length > 0) rows.push(obj);
+      i = end + 2;
     }
 
     res.status(200).json(rows);
