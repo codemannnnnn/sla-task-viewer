@@ -475,6 +475,7 @@ function saveSnapshot(data, isFirstOfDay) {
     snap.ops_ending   = ops_count;                // always update end
     h[todayStr] = snap;
   }
+}
 
 function deleteSnapshot(dateKey) {
   if (!confirm(`Delete snapshot for ${fmtDate(dateKey)}?`)) return;
