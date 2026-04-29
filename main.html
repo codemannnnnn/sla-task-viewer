@@ -55,6 +55,13 @@
   .btn-pull { background: #378ADD; border-color: #378ADD; color: #fff; }
   .btn-pull:hover { background: #185FA5; border-color: #185FA5; }
   .btn-pull:disabled { background: var(--bg3); border-color: var(--border2); color: var(--text3); cursor: not-allowed; transform: none; }
+  @keyframes breathe {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.75); }
+}
+.hb-alive {
+  animation: breathe 2s ease-in-out infinite;
+}
   .pull-spinner { display: inline-block; width: 10px; height: 10px; border: 1.5px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .6s linear infinite; margin-right: 5px; vertical-align: middle; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -916,19 +923,21 @@ async function checkHeartbeat() {
     const res = await fetch('/api/proxy', { method: 'POST', headers: { 'Content-Type': 'application/xml' }, body: '<ping/>' });
     // Any response from our proxy means the proxy is up; upstream may reject the body but that's fine
     if (res.status < 500) {
-      dot.style.background = '#1D9E75';
+  dot.style.background = '#1D9E75';
+      dot.classList.add('hb-alive');
       label.textContent = 'API reachable';
     } else {
       throw new Error('5xx');
     }
   } catch {
-    dot.style.background = '#E24B4A';
-    label.textContent = 'API unreachable';
+dot.style.background = '#E24B4A';
+      dot.classList.remove('hb-alive');
+      label.textContent = 'API unreachable';
   }
 }
 
 checkHeartbeat();
-setInterval(checkHeartbeat, 30000); // recheck every 30s
+setInterval(checkHeartbeat, 1200000); // recheck every 30s
 </script>
 </body>
 </html>
