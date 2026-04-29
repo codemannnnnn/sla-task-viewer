@@ -811,6 +811,15 @@ function loadPasted() {
 // ── Pull Live Data ────────────────────────────────────────────────────────────
 
 async function pullLiveData() {
+  const pwd = prompt('Enter password to pull live data:');
+  if (pwd !== '1234') {
+    if (pwd !== null) {
+      const errEl = document.getElementById('pull-err');
+      errEl.textContent = 'Incorrect password.';
+      errEl.style.display = 'block';
+    }
+    return;
+  }
   const btn = document.getElementById('pull-btn');
   const errEl = document.getElementById('pull-err');
   errEl.style.display = 'none';
