@@ -459,7 +459,7 @@ function buildSnapshot(data) {
   };
 }
 
-function saveSnapshot(data, isFirstOfDay) {
+function saveSnapshot(data) {
   const h         = loadHistory();
   const snap      = buildSnapshot(data);
   const ops_count = data.filter(r => OPS_TEAMS.has(r['rEntityName'])).length;
@@ -867,8 +867,7 @@ if (!Array.isArray(json) || json.length === 0) {
     buildSelects();
     document.getElementById('data-sub').textContent = `${rawData.length.toLocaleString()} tasks loaded from live API`;
     saveRawData(rawData);
-    const h = loadHistory();
-    saveSnapshot(rawData, !h[todayStr]);
+saveSnapshot(rawData);
     renderAll();
 
   } catch (err) {
