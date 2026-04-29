@@ -840,10 +840,12 @@ async function pullLiveData() {
 
     const json = await response.json();
 
-    if (!Array.isArray(json) || json.length === 0) {
-      throw new Error('API returned empty or unexpected data. Check proxy logs.');
-    }
-
+   if (json && json._debug) {
+  throw new Error(`Empty rows. Upstream: ${json.upstreamStatus}, XML length: ${json.xmlLength}, snippet: ${json.xmlSnippet}`);
+}
+if (!Array.isArray(json) || json.length === 0) {
+  throw new Error(`Unexpected: ${JSON.stringify(json).slice(0, 300)}`);
+}
     // Normalize API field names to dashboard field names
     rawData = json.map(normalizeApiRow);
     buildSelects();

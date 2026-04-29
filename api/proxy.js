@@ -17,7 +17,7 @@ export default async function handler(req, res) {
       req.on("error", reject);
     });
 
-    const response = await fetch(
+    const upstream = await fetch(
       "https://lokidev.glsuite.us/UI/api/UITierService/ProcessDocument",
       {
         method: "POST",
@@ -26,16 +26,40 @@ export default async function handler(req, res) {
       }
     );
 
-    const xmlText = await response.text();
+    const xmlText = await upstream.text();
 
-    // Return raw XML so we can see exactly what the API sends
-    res.status(200).json({ 
-      raw: xmlText.slice(0, 1000),
-      length: xmlText.length,
-      httpStatus: response.status
-    });
+    // Parse <row ... /> elements iteratively
+    const rows = [];
+    let i = 0;
+    while (i < xmlText.length) {
+      const start = xmlText.indexOf("<row ", i);
+      if (start === -1) break;
+      const end = xmlText.indexOf("/>", start);
+      if (end === -1) break;
+      const chunk = xmlText.slice(start + 5, end);
+      const obj = {};
+      const attrRe = /(\w+)="([^"]*)"/g;
+      let m;
+      while ((m = attrRe.exec(chunk)) !== null) {
+        obj[m[1].replace(/_x0020_/g, "_")] = m[2];
+      }
+      if (Object.keys(obj).length > 0) rows.push(obj);
+      i = end + 2;
+    }
+
+    // Always return array; include debug info if empty so client can surface it
+    if (rows.length === 0) {
+      return res.status(200).json({
+        _debug: true,
+        upstreamStatus: upstream.status,
+        xmlLength: xmlText.length,
+        xmlSnippet: xmlText.slice(0, 600),
+      });
+    }
+
+    res.status(200).json(rows);
 
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ _error: error.message });
   }
 }
