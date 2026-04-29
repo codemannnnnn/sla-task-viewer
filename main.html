@@ -130,6 +130,10 @@
       <div class="header-sub" id="data-sub">No data loaded — paste your CSV below or pull live data</div>
     </div>
     <div style="font-size:11px;color:var(--text2);padding-top:4px;" id="snapshot-badge"></div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);padding-top:4px;">
+  <span id="hb-dot" style="width:8px;height:8px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:background .3s;"></span>
+  <span id="hb-label">API status unknown</span>
+</div>
   </div>
 
   <div class="tabs">
@@ -903,6 +907,28 @@ document.getElementById('snapshot-list').addEventListener('click', e => {
   const tsv = [headers.join('\t'), ...stored.rows.map(r => headers.map(h => r[h]||'').join('\t'))].join('\n');
   loadData(tsv, true);
 })();
+// ── Heartbeat ─────────────────────────────────────────────────────────────────
+
+async function checkHeartbeat() {
+  const dot   = document.getElementById('hb-dot');
+  const label = document.getElementById('hb-label');
+  try {
+    const res = await fetch('/api/proxy', { method: 'POST', headers: { 'Content-Type': 'application/xml' }, body: '<ping/>' });
+    // Any response from our proxy means the proxy is up; upstream may reject the body but that's fine
+    if (res.status < 500) {
+      dot.style.background = '#1D9E75';
+      label.textContent = 'API reachable';
+    } else {
+      throw new Error('5xx');
+    }
+  } catch {
+    dot.style.background = '#E24B4A';
+    label.textContent = 'API unreachable';
+  }
+}
+
+checkHeartbeat();
+setInterval(checkHeartbeat, 30000); // recheck every 30s
 </script>
 </body>
 </html>
