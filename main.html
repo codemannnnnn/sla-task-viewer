@@ -448,8 +448,6 @@ function buildSnapshot(data) {
   const ops_count = data.filter(r => OPS_TEAMS.has(r['rEntityName'])).length;
   return {
     total:            data.length,
-    ops_starting:     ops_count,
-    ops_ending:       ops_count,
     overdue:          data.filter(r => slaStatus(r) === 'overdue').length,
     atrisk:           data.filter(r => slaStatus(r) === 'atrisk').length,
     delivery_pct:     delivery.pct,
@@ -462,24 +460,21 @@ function buildSnapshot(data) {
 }
 
 function saveSnapshot(data, isFirstOfDay) {
-  const h       = loadHistory();
-  const snap    = buildSnapshot(data);
+  const h         = loadHistory();
+  const snap      = buildSnapshot(data);
   const ops_count = data.filter(r => OPS_TEAMS.has(r['rEntityName'])).length;
-  if (isFirstOfDay) {
+
+  if (!h[todayStr]) {
+    // First save of the day — set both start and end
+    snap.ops_starting = ops_count;
+    snap.ops_ending   = ops_count;
     h[todayStr] = snap;
   } else {
-    if (h[todayStr]) {
-      h[todayStr].ops_ending = ops_count;
-    } else {
-      h[todayStr] = snap;
-    }
+    // Already have a snapshot today — update stats but NEVER overwrite ops_starting
+    snap.ops_starting = h[todayStr].ops_starting; // preserve original
+    snap.ops_ending   = ops_count;                // always update end
+    h[todayStr] = snap;
   }
-  if (saveHistory(h)) {
-    document.getElementById('save-notice').style.display = 'block';
-    setTimeout(() => document.getElementById('save-notice').style.display = 'none', 3000);
-    updateBadge();
-  }
-}
 
 function deleteSnapshot(dateKey) {
   if (!confirm(`Delete snapshot for ${fmtDate(dateKey)}?`)) return;
