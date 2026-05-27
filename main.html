@@ -901,7 +901,7 @@ function copyTeamCounts() {
     if (ORDER.includes(t)) counts[t] = (counts[t] || 0) + 1;
   });
 
-  const text = ORDER.map(t => counts[t] ?? 0).join('\t');
+const text = ORDER.map(t => counts[t] ?? 0).join('\n');
 
   navigator.clipboard.writeText(text).then(() => {
     const btn = document.getElementById('copy-counts-btn');
