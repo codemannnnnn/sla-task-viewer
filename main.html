@@ -166,8 +166,9 @@
       <div class="save-notice" id="save-notice">Snapshot saved for today.</div>
     </div>
 
-    <div class="filter-row">
-      <button id="ops-toggle" class="btn btn-toggle">Ops view</button>
+<div class="filter-row">
+  <button id="ops-toggle" class="btn btn-toggle">Ops view</button>
+  <button id="copy-counts-btn" class="btn">📋 Copy Counts</button>
       <select id="filter-entity"><option value="">All teams</option></select>
       <select id="filter-status"><option value="">All statuses</option></select>
       <select id="filter-client"><option value="">All clients</option></select>
@@ -884,7 +885,31 @@ saveSnapshot(rawData);
 }
 
 // ── Event listeners ───────────────────────────────────────────────────────────
+function copyTeamCounts() {
+  const ORDER = [
+    'Business Analysis - Team Wynn',
+    'Configuration - Team Goat',
+    'Configuration - Team Never Laughs',
+    'Quality Assurance - Team Gunsight',
+    'Quality Assurance - Team Mad Wolf',
+    'Operations Management',
+  ];
 
+  const counts = {};
+  rawData.forEach(r => {
+    const t = r['rEntityName'] || '';
+    if (ORDER.includes(t)) counts[t] = (counts[t] || 0) + 1;
+  });
+
+  const text = ORDER.map(t => counts[t] ?? 0).join('\t');
+
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-counts-btn');
+    btn.textContent = '✓ Copied!';
+    setTimeout(() => btn.textContent = '📋 Copy Counts', 2000);
+  });
+}
+ document.getElementById('copy-counts-btn').addEventListener('click', copyTeamCounts);
 document.getElementById('today-date-label').textContent = todayStr;
 document.getElementById('tab-today').addEventListener('click', () => switchTab('today'));
 document.getElementById('tab-history').addEventListener('click', () => switchTab('history'));
