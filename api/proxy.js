@@ -9,26 +9,35 @@ export default async function handler(req, res) {
     return res.status(405).send("Method Not Allowed");
   }
 
-  try {
-    const rawBody = await new Promise((resolve, reject) => {
-      let data = "";
-      req.on("data", (chunk) => (data += chunk));
-      req.on("end", () => resolve(data));
-      req.on("error", reject);
-    });
+  const token = process.env.GLSUITE_TOKEN;
+  if (!token) {
+    return res.status(500).json({ error: "Server misconfigured: missing token." });
+  }
 
+  const xmlBody = `<root RuleMarker="1">
+  <Object Name="Entity" ObjectID="1" ObjectPK="1000009">
+    <Association ActionTypeID="1" ObjectID="11">
+      <Property Name="ObjectTypeID" ObjectID="37" ObjectPK="76" PriorValue="" ActionTypeID="2">109973</Property>
+      <Object ObjectID="34" ActionTypeID="1" Selected="1">
+        <Property Name="ObjectTypeID" ObjectID="37" ObjectPK="76" PriorValue="" ActionTypeID="2">12571</Property>
+      </Object>
+    </Association>
+  </Object>
+${token}
+</root>`;
+
+  try {
     const upstream = await fetch(
-      "https://lokiprod.glsuite.us/UI/api/UITierService/ProcessDocument",
+      "https://lokidev.glsuite.us/UI/api/UITierService/ProcessDocument",
       {
         method: "POST",
         headers: { "Content-Type": "application/xml" },
-        body: rawBody,
+        body: xmlBody,
       }
     );
 
     const xmlText = await upstream.text();
 
-    // Parse <row ... /> elements iteratively
     const rows = [];
     let i = 0;
     while (i < xmlText.length) {
@@ -47,7 +56,6 @@ export default async function handler(req, res) {
       i = end + 2;
     }
 
-    // Always return array; include debug info if empty so client can surface it
     if (rows.length === 0) {
       return res.status(200).json({
         _debug: true,
