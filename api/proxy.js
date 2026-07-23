@@ -28,7 +28,7 @@ ${token}
 
   try {
     const upstream = await fetch(
-      "https://lokidev.glsuite.us/UI/api/UITierService/ProcessDocument",
+      "https://lokiprod.glsuite.us/UI/api/UITierService/ProcessDocument",
       {
         method: "POST",
         headers: { "Content-Type": "application/xml" },
