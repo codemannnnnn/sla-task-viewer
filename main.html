@@ -844,7 +844,6 @@ async function pullLiveData() {
   method: 'POST',
   headers: { 'Content-Type': 'application/xml' },
   body: '<request/>',
-});
     });
 
     if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`);
